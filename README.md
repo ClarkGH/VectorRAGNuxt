@@ -18,3 +18,7 @@ I want to see the closest car related to what was prompted
 - MongoDB for a vectorDB
 - ???
 - ChatGPT's API
+
+## Issues run into
+
+- Nuxt Doesn't play well with Linux + Node 18/20 some build issues resolved with force installations.
