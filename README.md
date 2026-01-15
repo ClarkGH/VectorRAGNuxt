@@ -15,6 +15,6 @@ I want to see the closest car related to what was prompted
 ## Tech Stack
 
 - Nuxt.js
-- MongoDB's for a vectorDB
+- MongoDB for a vectorDB
 - ???
 - ChatGPT's API
