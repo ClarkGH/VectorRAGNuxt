@@ -43,3 +43,8 @@ I only see cars, vans and SUVs are not scraped
 ## Cool Credits
 
 - Car data scraped from the [NHTSA vPIC API](https://vpic.nhtsa.dot.gov/api/)
+
+## Docs
+
+- [How it works](docs/rag.md): the pipeline, what we're seeding, and the vector math behind RAG
+- [Spec: Ingest + vector search](docs/specs/ingest-search.md): the plan for the "closest car" slice
