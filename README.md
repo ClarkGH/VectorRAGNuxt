@@ -12,15 +12,21 @@ As a User
 When I submit a prompt
 I want to see the closest car related to what was prompted
 
+## TODO
+
+- Seed scraped car data into local mongoDB
+- Create NUXT RAG layer
+- ???
+- Chat Gippity
+- Profit
+
 ## Tech Stack
 
 - Nuxt.js
-- Node 25.^
+- Node 26
 - MongoDB for a vectorDB
-- ???
-- ChatGPT's API
+- ChatGPT's API (env key not included)
 
-## Issues run into
+## Cool Credits
 
-- Nuxt Doesn't play well with Linux + Node 18/20 some build issues resolved with force installations.
-- Node 18 doesn't play well with the server, need to be on at least 20.11
+- Car data scraped from the [NHTSA vPIC API](https://vpic.nhtsa.dot.gov/api/)
