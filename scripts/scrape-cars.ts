@@ -3,6 +3,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import type { Car, CarsFile } from "../shared/types/car.ts";
 
 const API = "https://vpic.nhtsa.dot.gov/api/vehicles";
 const DATA_DIR = join(import.meta.dirname, "..", "data");
@@ -10,21 +11,13 @@ const CACHE_DIR = join(DATA_DIR, ".cache");
 const OUT_FILE = join(DATA_DIR, "cars.json");
 const CONCURRENCY = 4;
 const MAX_ATTEMPTS = 4;
+const FETCH_TIMEOUT_MS = 15_000;
 
 // --- vPIC response shapes -------------------------------------------------
 
 type VpicResponse<T> = { Count: number; Message: string; Results: T[] };
 type Make = { MakeId: number; MakeName: string };
 type Model = { Make_ID: number; Make_Name: string; Model_ID: number; Model_Name: string };
-
-export type Car = { make: string; makeId: number; model: string; modelId: number; year: number };
-
-export type CarsFile = {
-    source: string;
-    scrapedAt: string;
-    years: [from: number, to: number];
-    cars: Car[];
-};
 
 // --- Args -----------------------------------------------------------------
 
@@ -77,7 +70,8 @@ async function writeAtomic(path: string, data: string) {
 async function fetchJson<T>(url: string): Promise<T> {
     for (let attempt = 1; ; attempt++) {
         try {
-            const res = await fetch(url);
+            // A stalled request throws a TimeoutError, which retries like a network error.
+            const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
             if (!res.ok) throw new HttpError(res.status);
             return (await res.json()) as T;
         } catch (err) {

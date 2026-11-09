@@ -5,8 +5,9 @@ Playing with Vector DBs / RAG / NUXT for a work skill pivot. Might throw this aw
 ## How to Run
 Assuming you have pnpm
 
-`$ pnpm install`
-`$ pnpm scrape`
+1. Install the necessary packages `$ pnpm install`
+2. Scrape the cars manually `$ pnpm scrape [--from 2016] [--to 2026] [--makes honda,toyota] [--fresh]`
+3. Run the webapp `$ pnpm dev` (it does nothing)
 
 ## Why?
 
