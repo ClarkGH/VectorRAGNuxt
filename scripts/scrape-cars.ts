@@ -11,9 +11,22 @@ const OUT_FILE = join(DATA_DIR, "cars.json");
 const CONCURRENCY = 4;
 const MAX_ATTEMPTS = 4;
 
+// --- vPIC response shapes -------------------------------------------------
+
+type VpicResponse<T> = { Count: number; Message: string; Results: T[] };
 type Make = { MakeId: number; MakeName: string };
 type Model = { Make_ID: number; Make_Name: string; Model_ID: number; Model_Name: string };
-type Car = { make: string; makeId: number; model: string; modelId: number; year: number };
+
+export type Car = { make: string; makeId: number; model: string; modelId: number; year: number };
+
+export type CarsFile = {
+    source: string;
+    scrapedAt: string;
+    years: [from: number, to: number];
+    cars: Car[];
+};
+
+// --- Args -----------------------------------------------------------------
 
 const thisYear = new Date().getFullYear();
 const { values: args } = parseArgs({
@@ -32,7 +45,28 @@ if (!Number.isInteger(fromYear) || !Number.isInteger(toYear) || fromYear > toYea
     process.exit(1);
 }
 
-const stats = { fetched: 0, cached: 0, failed: [] as string[] };
+// --- Fetching and caching -------------------------------------------------
+
+class HttpError extends Error {
+    status: number;
+
+    constructor(status: number) {
+        super(`HTTP ${status}`);
+        this.status = status;
+    }
+
+    // Server errors and rate limiting can clear up; other 4xx won't.
+    get retryable() {
+        return this.status >= 500 || this.status === 429;
+    }
+}
+
+const stats = { fetched: 0, cached: 0 };
+const failed: string[] = [];
+
+function errorMessage(err: unknown) {
+    return err instanceof Error ? err.message : String(err);
+}
 
 async function writeAtomic(path: string, data: string) {
     const tmp = `${path}.tmp`;
@@ -40,17 +74,16 @@ async function writeAtomic(path: string, data: string) {
     await rename(tmp, path);
 }
 
-async function fetchJson(url: string) {
+async function fetchJson<T>(url: string): Promise<T> {
     for (let attempt = 1; ; attempt++) {
         try {
             const res = await fetch(url);
-            if (res.ok) return await res.json();
-            // 4xx other than rate limiting won't get better on retry.
-            if (res.status < 500 && res.status !== 429) throw Object.assign(new Error(`HTTP ${res.status}`), { fatal: true });
-            throw new Error(`HTTP ${res.status}`);
-        } catch (err: any) {
-            if (err.fatal || attempt >= MAX_ATTEMPTS) throw err;
-            await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+            if (!res.ok) throw new HttpError(res.status);
+            return (await res.json()) as T;
+        } catch (err) {
+            const retryable = !(err instanceof HttpError) || err.retryable;
+            if (!retryable || attempt >= MAX_ATTEMPTS) throw err;
+            await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
         }
     }
 }
@@ -60,25 +93,27 @@ async function cachedResults<T>(cacheName: string, url: string): Promise<T[]> {
     const cacheFile = join(CACHE_DIR, `${cacheName}.json`);
     if (!args.fresh) {
         try {
-            const results = JSON.parse(await readFile(cacheFile, "utf8"));
+            const results = JSON.parse(await readFile(cacheFile, "utf8")) as T[];
             stats.cached++;
             return results;
         } catch {
             // Missing or corrupt cache entry: fall through and fetch.
         }
     }
-    const body = await fetchJson(url);
+    const body = await fetchJson<VpicResponse<T>>(url);
     await writeAtomic(cacheFile, JSON.stringify(body.Results));
     stats.fetched++;
     return body.Results;
 }
 
+// Runs worker over items with CONCURRENCY in flight. The workers share one
+// iterator, so each item is taken exactly once.
 async function pool<T>(items: T[], worker: (item: T) => Promise<void>) {
-    let next = 0;
+    const queue = items.values();
     let done = 0;
     const runners = Array.from({ length: CONCURRENCY }, async () => {
-        while (next < items.length) {
-            await worker(items[next++]);
+        for (const item of queue) {
+            await worker(item);
             done++;
             if (done % 100 === 0 || done === items.length) {
                 process.stdout.write(`\r  ${done}/${items.length} requests`);
@@ -89,12 +124,17 @@ async function pool<T>(items: T[], worker: (item: T) => Promise<void>) {
     process.stdout.write("\n");
 }
 
+// --- Scrape ---------------------------------------------------------------
+
 await mkdir(CACHE_DIR, { recursive: true });
 
 let makes = await cachedResults<Make>("makes", `${API}/GetMakesForVehicleType/car?format=json`);
 if (args.makes) {
     const wanted = new Set(args.makes.split(",").map((m) => m.trim().toLowerCase()));
     makes = makes.filter((m) => wanted.has(m.MakeName.toLowerCase()));
+    const found = new Set(makes.map((m) => m.MakeName.toLowerCase()));
+    const missing = [...wanted].filter((m) => !found.has(m));
+    if (missing.length) console.warn(`Warning: no vPIC car make named ${missing.join(", ")}`);
 }
 console.log(`${makes.length} makes, years ${fromYear}-${toYear}`);
 
@@ -117,24 +157,29 @@ await pool(jobs, async ({ make, year }) => {
                 year,
             });
         }
-    } catch (err: any) {
-        stats.failed.push(`${make.MakeName} ${year}: ${err.message}`);
+    } catch (err) {
+        failed.push(`${make.MakeName} ${year}: ${errorMessage(err)}`);
     }
 });
+
+// --- Output ---------------------------------------------------------------
 
 const sorted = [...cars.values()].sort(
     (a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.year - b.year,
 );
 
-await writeAtomic(
-    OUT_FILE,
-    JSON.stringify({ source: "NHTSA vPIC", scrapedAt: new Date().toISOString(), years: [fromYear, toYear], cars: sorted }, null, 2),
-);
+const output: CarsFile = {
+    source: "NHTSA vPIC",
+    scrapedAt: new Date().toISOString(),
+    years: [fromYear, toYear],
+    cars: sorted,
+};
+await writeAtomic(OUT_FILE, JSON.stringify(output, null, 2));
 
 const makesKept = new Set(sorted.map((c) => c.makeId)).size;
 console.log(`Makes queried: ${makes.length}, makes kept: ${makesKept}, cars: ${sorted.length}`);
 console.log(`Requests fetched: ${stats.fetched}, from cache: ${stats.cached}`);
-if (stats.failed.length) {
-    console.error(`${stats.failed.length} requests failed:\n  ${stats.failed.join("\n  ")}`);
-    process.exit(1);
+if (failed.length) {
+    console.error(`${failed.length} requests failed:\n  ${failed.join("\n  ")}`);
+    process.exitCode = 1;
 }

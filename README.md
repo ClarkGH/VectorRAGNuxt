@@ -2,15 +2,27 @@
 
 Playing with Vector DBs / RAG / NUXT for a work skill pivot. Might throw this away and never touch again
 
+## How to Run
+Assuming you have pnpm
+
+`$ pnpm install`
+`$ pnpm scrape`
+
 ## Why?
 
 "Don't worry about it, bro."
 
 ## What?
 
+### Happy Path
 As a User
 When I submit a prompt
 I want to see the closest car related to what was prompted
+
+### Sad Path
+As a User
+When I submit a prompt for a van
+I only see cars, vans and SUVs are not scraped
 
 ## TODO
 

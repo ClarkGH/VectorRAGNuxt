@@ -8,12 +8,22 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "scrape": "node scripts/scrape-cars.ts"
+    "scrape": "node scripts/scrape-cars.ts",
+    "typecheck:scripts": "tsc -p scripts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "mongodb": "^7.8.0",
     "nuxt": "^4.6.4",
     "vue": "^3.5.45",
     "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "@types/node": "^26.6.6",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "eslint": "^10.14.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   }
 }
