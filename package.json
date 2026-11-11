@@ -2,6 +2,10 @@
   "name": "rag-nuxt",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -9,9 +13,18 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "scrape": "node scripts/scrape-cars.ts",
+    "describe": "node --env-file-if-exists=.env scripts/describe-cars.ts",
+    "ingest": "node --env-file-if-exists=.env scripts/ingest-cars.ts",
+    "screenshot": "node scripts/screenshot.ts",
+    "browser:install": "playwright install chromium-headless-shell",
+    "typecheck": "nuxt typecheck && tsc -p scripts",
     "typecheck:scripts": "tsc -p scripts",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run tests/unit",
+    "test:watch": "vitest tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@nuxt/ui": "^4.12.0",
@@ -25,8 +38,10 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "@types/node": "^26.6.6",
-    "@typescript/native": "npm:typescript@^7.0.2",
     "eslint": "^10.14.0",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "playwright": "^1.65.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0",
+    "vue-tsc": "^3.3.14"
   }
 }

@@ -1,2 +1,50 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Open Sans: a free Google font; @nuxt/fonts downloads and self-hosts it. */
+@theme {
+  --font-sans: "Open Sans", system-ui, sans-serif;
+}
+
+/* Car-pricing-site palette: navy band, cool gray page, white cards, one blue for actions.
+   Nuxt UI toggles .dark on <html> from the system setting. */
+:root {
+  --navy: #0b2343;
+  --hero-muted: #c3d0e3;
+  --page: #f2f4f7;
+  --card: #ffffff;
+  --ink: #1b2330;
+  --muted: #586374;
+  --line: #dce2ea;
+  --blue: #1a5fc4;
+  --blue-hover: #134c9f;
+  --bar: #1a5fc4;
+  --track: #e4e9f0;
+  --score: #134c9f;
+  --rank-bg: #e7effb;
+  --rank-ink: #134c9f;
+  --danger: #c0392b;
+}
+
+.dark {
+  --navy: #081a33;
+  --hero-muted: #a9b8cf;
+  --page: #0e1522;
+  --card: #162034;
+  --ink: #e5eaf2;
+  --muted: #9aa6b8;
+  --line: #26334b;
+  --blue: #1a5fc4;
+  --blue-hover: #2a6fd6;
+  --bar: #5b95ec;
+  --track: #26334b;
+  --score: #8db5f3;
+  --rank-bg: #1f3152;
+  --rank-ink: #b9d0f7;
+  --danger: #e06a5d;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+}

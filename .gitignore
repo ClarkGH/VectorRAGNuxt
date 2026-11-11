@@ -25,3 +25,9 @@ logs
 .env
 .env.*
 !.env.example
+
+# Page screenshots (pnpm screenshot)
+screenshots
+
+# CI workflow: kept locally, not pushed until CI is wanted on GitHub (see docs/tech-debt.md #4)
+.github/workflows/ci.yml

@@ -1,0 +1,19 @@
+# Local MongoDB with vector search. `docker compose up -d` / `docker compose down`.
+services:
+  mongo:
+    image: mongodb/mongodb-atlas-local
+    ports:
+      # Loopback only: Docker's port publishing bypasses ufw, and this image has no auth (S5).
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    tmpfs:
+      # mongot (the search engine) pauses index builds when its disk is over 85% full.
+      # Keeping its index in RAM sidesteps that; it rebuilds from Mongo's data on start.
+      # uid/gid 1000 is the image's mongod user.
+      - /data/mongot:rw,size=1g,uid=1000,gid=1000
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+
+volumes:
+  mongo-data:
+  mongo-config:

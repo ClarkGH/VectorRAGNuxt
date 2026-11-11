@@ -29,12 +29,13 @@ flowchart LR
 
 **Done once, ahead of time:**
 1. **Collect:** download every passenger car model sold in the US from 2016 to 2026 from a free government database.
-2. **Place on the map:** send each car's name to an AI model, which turns it into a map position, and save the positions in our database.
+2. **Describe:** a writing AI adds a sentence or two per car ("Compact sedan known for reliability…"), so the map knows more than the name.
+3. **Place on the map:** send each car's name and description to an AI model, which turns it into a map position, and save the positions in our database.
 
 **Every time someone searches:**
 
-3. **Place the request on the map:** the same AI model turns the request into a position.
-4. **Find the neighbors:** the database returns the cars closest to that position, best match first.
+4. **Place the request on the map:** the same AI model turns the request into a position. If the request has a year in it ("2018 accord"), the year is set aside as a filter.
+5. **Find the neighbors:** the database returns the cars closest to that position, best match first, skipping any not sold in the requested years (two years either side of a single year).
 
 ## What's in the data
 
@@ -43,11 +44,11 @@ flowchart LR
 | **Source** | The US government's free vehicle database ([NHTSA vPIC](https://vpic.nhtsa.dot.gov/api/)) |
 | **Covers** | Passenger cars, model years 2016–2026 |
 | **Size** | 673 car models from 149 manufacturers (4,414 model-year combinations) |
-| **Each car has** | Manufacturer, model name and the years it was sold. **Nothing else.** |
+| **Each car has** | Manufacturer, model name, the years it was sold, and a short **AI-written** description |
 
 **What's missing, and why it matters:**
 - **No SUVs, vans or pickups.** The government database files them separately. Searching for "family SUV" won't find a Honda CR-V, because it isn't in the data. *Vans in particular have pulled quite the van-ishing act.*
-- **No descriptions, prices or specs.** We only have names, so the AI has to rely on what it already knows about, say, a Civic.
+- **No verified facts, prices or specs.** The descriptions come from an AI's general knowledge, not a spec sheet, so they can be wrong. The page says so. Cars the AI doesn't recognize are described as "Lesser-known model from MAKE" rather than guessed at. *We asked it not to make things up, and unlike a used-car salesman, it mostly listens.*
 - **No curation.** Limo builders and kit-car makers are included alongside Toyota and BMW, and they can show up in results.
 
 ## What to expect from results
@@ -55,15 +56,17 @@ flowchart LR
 | Request | Expected quality | Why |
 |---|---|---|
 | "honda civic", "civic type r" | **Good** | Close to the names we have |
-| "small honda", "cheap reliable car" | **Fair** | Works for famous models the AI already knows about |
-| "something like a Kandi K27" | **Poor** | Obscure names carry little meaning to the AI |
+| "2018 accord" | **Good** | Matches by name, filtered to models sold 2016–2020 |
+| "small honda", "cheap reliable car" | **Fair to good** | The descriptions now carry words like "compact" and "affordable" for well-known models |
+| "something like a Kandi K27" | **Poor** | Obscure models only get "Lesser-known model", so there's little to match |
 | "family SUV", "pickup truck" | **None** | Those vehicles aren't in the data |
 
-The biggest single improvement would be giving each car a short written description before placing it on the map. That's an open decision in the [spec](specs/ingest-search.md#open-questions).
+These are expectations, not measurements yet; the table gets real scores once we've run each request.
 
 ## Cost
 
-- **Setting up the map:** about 4,000 words' worth of AI processing for the whole catalog. That costs **well under one cent** and only happens once, plus again whenever the car list changes. *Cheaper than a car wash, and you don't even have to vacuum the seats.*
+- **Writing descriptions:** a few cents for the whole catalog, once. Only new cars are described on later runs.
+- **Setting up the map:** a fraction of a cent for the whole catalog, plus again whenever the car list or descriptions change. *Cheaper than a car wash, and you don't even have to vacuum the seats.*
 - **Each search:** one tiny AI call, a fraction of a cent.
 - **Risk:** each search costs a little money, so the app must not be public until it has login or rate limits. For now it runs locally only.
 
@@ -83,8 +86,8 @@ The sections below are for engineers and the curious. Click to expand.
 <details>
 <summary>Architecture and data notes</summary>
 
-- Pipeline: `pnpm scrape` (vPIC → `data/cars.json`) → `pnpm ingest` (group, embed, upsert into Mongo) → `POST /api/search` (embed the prompt, `$vectorSearch`).
-- Embedding model: OpenAI `text-embedding-3-small`, 1,536 dimensions. The text embedded per model is `"{make} {model}"`, e.g. `"HONDA Civic"` (about 6 tokens).
+- Pipeline: `pnpm scrape` (vPIC → `data/cars.json`) → `pnpm describe` (`gpt-5-mini` → `data/descriptions.json`) → `pnpm ingest` (group, embed, upsert into Mongo) → `POST /api/search` (pull out years, embed the rest, `$vectorSearch` with a `years` pre-filter).
+- Embedding model: OpenAI `text-embedding-3-small`, 1,536 dimensions. The text embedded per model is `"{make} {model}. {description}"`, e.g. `"HONDA Civic. Compact sedan/hatchback known for reliability…"` (about 40 tokens), or just the name if there's no description.
 - **One doc per make+model, not per year.** `"HONDA Civic"` is identical text in 2016 and 2024, so per-year docs would produce 11 identical vectors and flood the results. Grouping turns 4,414 rows into 673 docs, each with a `years` array.
 - vPIC files SUVs and vans as "multipurpose passenger vehicle" and pickups as "truck"; we scrape type "car" only.
 - Largest makes by row count: BMW 302, Audi 201, ARMBRUSTER STAGEWAY 176 (a limo builder).
@@ -96,16 +99,29 @@ The sections below are for engineers and the curious. Click to expand.
 
 | File | What it does |
 |---|---|
-| `scripts/scrape-cars.ts` | `pnpm scrape`: vPIC → `data/cars.json`, with a resumable response cache in `data/.cache/` |
-| `scripts/ingest-cars.ts` | `pnpm ingest`: groups rows into models, embeds only new or changed ones, upserts, ensures the vector index and waits until it's queryable |
+| `scripts/scrape-cars.ts` | `pnpm scrape` CLI: fetches from vPIC into a resumable cache (`data/.cache/`), then rebuilds `data/cars.json` from the whole cache |
+| `scripts/lib/scrape.ts` | Pure scraper helpers: vPIC types, safe cache names (S8), rows from cached model lists |
+| `scripts/describe-cars.ts` | `pnpm describe` CLI: batches of 40, resumable, saves after every batch, stops on the daily limit |
+| `scripts/lib/describe.ts` | Description prompt, schema and checks (`cleanDescription`, P1–P6); `describeCars()` keeps only valid answers for cars it asked about |
+| `scripts/screenshot.ts` | `pnpm screenshot`: headless-Chromium screenshots of the search page, with `/api/search` mocked unless `--real` |
+| `scripts/lib/util.ts` | Shared CLI helpers: atomic writes, the worker pool |
+| `scripts/ingest-cars.ts` | `pnpm ingest` CLI: reads env and descriptions, connects, calls the ingest library |
+| `scripts/lib/ingest.ts` | Groups rows into models (with descriptions); embeds only new, changed, or other-model ones (`needsEmbedding`); upserts; removes stale models; creates or upgrades the vector index and waits until it's ready |
 | `shared/utils/embedding.ts` | **The one place** that defines the embedding model, dimensions, text format, collection and index names, and `embedTexts()`. Ingest and search both use it |
-| `shared/types/car.ts` | `Car` (scraped row), `CarModel` / `CarDoc` (Mongo), `SearchResult` (API) |
+| `shared/types/car.ts` | `Car` (scraped row), `CarModel` (client), `CarDoc` (Mongo, server only), `SearchResult` (API) |
+| `server/utils/search.ts` | Framework-free search logic: JSON check (S1), body validation (S2), `parseYearFilter()`, `searchCars()` |
+| `server/utils/catalog.ts` | `getCatalogSummary()`: model count and year span, for `GET /api/catalog` |
+| `shared/utils/years.ts` | `formatYears()`: the one year-range formatter, used by the page and the describe prompt |
 | `server/utils/db.ts` | `getDb()`: one shared Mongo connection; a failed connect is retried on the next call |
 | `server/utils/openai.ts` | `getOpenAI()`: one shared OpenAI client, created on first use |
-| `server/api/search.post.ts` | `POST /api/search`: JSON-only (S1), strict validation (S2), embed + `$vectorSearch`, generic errors (S6) |
+| `server/api/search.post.ts` | `POST /api/search`: maps the search logic onto HTTP (415 / 400 / 502 with generic messages, S6) |
 | `app/pages/index.vue` | Search box and result cards (Nuxt UI) |
+| `docker-compose.yml` | Local Mongo + mongot: loopback only (S5), mongot index in RAM (disk-threshold workaround) |
+| `tests/unit/` | Validation, year parsing, description checks, grouping, re-embed rules, cache-name safety |
+| `tests/integration/` | Real Mongo + mongot with a stand-in OpenAI: ingest, index (and upgrade), ranking, year filter, descriptions, no leaked fields, stale removal |
+| `tests/fixtures/fake-openai.ts` | Stand-in `/v1/embeddings` (trigram vectors) and `/v1/responses` (scripted descriptions, including misbehaving ones) |
 
-**Testing without an OpenAI key:** the SDK honors `OPENAI_BASE_URL`, so pointing it at a local stand-in `/v1/embeddings` server exercises everything except real match quality. That's how this slice was verified.
+**Testing without an OpenAI key:** the SDK accepts a `baseURL` (or the `OPENAI_BASE_URL` environment variable), so the tests point it at `tests/fixtures/fake-openai.ts`. That exercises everything except real match quality.
 
 </details>
 
@@ -184,11 +200,17 @@ The Civic scores 0.98 and the BMW 0.68. A score of 0.5 means unrelated. Real sco
 
 Brute force means computing the dot product with every stored vector: $673 \times 1536 \approx 1$ million multiplications, about a millisecond. At millions of vectors that's too slow, so Mongo's index uses **HNSW**, a layered graph that a search walks greedily toward the query. It only visits a fraction of the vectors, at the cost of being *approximate*. `numCandidates` is the dial: explore more candidates for better recall but a slower query. Mongo suggests 10–20× `limit`.
 
-### 7. Why bare names are weak
+### 7. Why bare names are weak, and what descriptions change
 
-The vector for `"HONDA Civic"` carries whatever the model learned about Civics (compact, affordable, reliable), so concept queries can work for famous models. Obscure names carry little, and no facts beyond the name are in our text. Generating a short description per model before embedding it is the obvious fix.
+The vector for `"HONDA Civic"` carries whatever the model learned about Civics (compact, affordable, reliable), so concept queries can work for famous models. Obscure names carry little. Adding a description puts those concepts into the text itself: `"HONDA Civic. Compact sedan/hatchback known for reliability, fuel efficiency…"` lands much nearer "cheap reliable car" than the name alone does.
 
-### 8. Where the "G" fits later
+The trade-off is that the name is now a smaller share of the text, so pure name searches ("civic") score a little lower than before, and a confidently wrong description pulls a car toward the wrong neighbors. That's why unknown cars get a deliberately bland "Lesser-known model from MAKE."
+
+### 8. Filtering by year
+
+A year isn't meaning, it's a fact, so it doesn't go into the vector. `"2018 accord"` embeds as `"accord"` and adds a pre-filter: only docs whose `years` array contains any of 2016–2020 are searched at all. Pre-filtering happens inside the HNSW walk, so you still get `limit` results (when that many exist) rather than five results minus whatever a later filter throws away.
+
+### 9. Where the "G" fits later
 
 Generation pastes the top results into a chat prompt and lets the model write the answer. Retrieval decides which facts the model sees, so it has to be right first.
 

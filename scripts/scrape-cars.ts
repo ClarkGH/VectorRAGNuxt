@@ -1,9 +1,22 @@
 // Scrapes car makes/models/years from the NHTSA vPIC API into data/cars.json.
 // Usage: pnpm scrape [--from 2016] [--to 2026] [--makes honda,toyota] [--fresh]
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+//
+// The flags choose what to *fetch*. cars.json is always rebuilt from everything
+// in data/.cache, so a partial run adds to the data instead of replacing it.
+// Delete data/.cache to start over.
+import { mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import type { Car, CarsFile } from "../shared/types/car.ts";
+import type { CarsFile } from "../shared/types/car.ts";
+import {
+    carsFromModelLists,
+    modelCacheName,
+    parseModelCacheName,
+    type Make,
+    type Model,
+    type VpicResponse,
+} from "./lib/scrape.ts";
+import { errorMessage, pool, writeAtomic } from "./lib/util.ts";
 
 const API = "https://vpic.nhtsa.dot.gov/api/vehicles";
 const DATA_DIR = join(import.meta.dirname, "..", "data");
@@ -12,12 +25,6 @@ const OUT_FILE = join(DATA_DIR, "cars.json");
 const CONCURRENCY = 4;
 const MAX_ATTEMPTS = 4;
 const FETCH_TIMEOUT_MS = 15_000;
-
-// --- vPIC response shapes -------------------------------------------------
-
-type VpicResponse<T> = { Count: number; Message: string; Results: T[] };
-type Make = { MakeId: number; MakeName: string };
-type Model = { Make_ID: number; Make_Name: string; Model_ID: number; Model_Name: string };
 
 // --- Args -----------------------------------------------------------------
 
@@ -57,16 +64,6 @@ class HttpError extends Error {
 const stats = { fetched: 0, cached: 0 };
 const failed: string[] = [];
 
-function errorMessage(err: unknown) {
-    return err instanceof Error ? err.message : String(err);
-}
-
-async function writeAtomic(path: string, data: string) {
-    const tmp = `${path}.tmp`;
-    await writeFile(tmp, data);
-    await rename(tmp, path);
-}
-
 async function fetchJson<T>(url: string): Promise<T> {
     for (let attempt = 1; ; attempt++) {
         try {
@@ -100,29 +97,14 @@ async function cachedResults<T>(cacheName: string, url: string): Promise<T[]> {
     return body.Results;
 }
 
-// Runs worker over items with CONCURRENCY in flight. The workers share one
-// iterator, so each item is taken exactly once.
-async function pool<T>(items: T[], worker: (item: T) => Promise<void>) {
-    const queue = items.values();
-    let done = 0;
-    const runners = Array.from({ length: CONCURRENCY }, async () => {
-        for (const item of queue) {
-            await worker(item);
-            done++;
-            if (done % 100 === 0 || done === items.length) {
-                process.stdout.write(`\r  ${done}/${items.length} requests`);
-            }
-        }
-    });
-    await Promise.all(runners);
-    process.stdout.write("\n");
-}
-
 // --- Scrape ---------------------------------------------------------------
 
 await mkdir(CACHE_DIR, { recursive: true });
 
 let makes = await cachedResults<Make>("makes", `${API}/GetMakesForVehicleType/car?format=json`);
+// MakeId ends up in cache file paths, so don't trust it to be a number (S8;
+// modelCacheName also refuses non-integers).
+makes = makes.filter((m) => Number.isInteger(m.MakeId));
 if (args.makes) {
     const wanted = new Set(args.makes.split(",").map((m) => m.trim().toLowerCase()));
     makes = makes.filter((m) => wanted.has(m.MakeName.toLowerCase()));
@@ -137,41 +119,48 @@ for (const make of makes) {
     for (let year = fromYear; year <= toYear; year++) jobs.push({ make, year });
 }
 
-const cars = new Map<string, Car>();
-await pool(jobs, async ({ make, year }) => {
-    const url = `${API}/GetModelsForMakeIdYear/makeId/${make.MakeId}/modelyear/${year}/vehicletype/car?format=json`;
-    try {
-        const models = await cachedResults<Model>(`${make.MakeId}-${year}`, url);
-        for (const m of models) {
-            cars.set(`${m.Make_ID}-${m.Model_ID}-${year}`, {
-                make: m.Make_Name.trim(),
-                makeId: m.Make_ID,
-                model: m.Model_Name.trim(),
-                modelId: m.Model_ID,
-                year,
-            });
+await pool(
+    jobs,
+    CONCURRENCY,
+    async ({ make, year }) => {
+        const url = `${API}/GetModelsForMakeIdYear/makeId/${make.MakeId}/modelyear/${year}/vehicletype/car?format=json`;
+        try {
+            await cachedResults<Model>(modelCacheName(make.MakeId, year), url);
+        } catch (err) {
+            failed.push(`${make.MakeName} ${year}: ${errorMessage(err)}`);
         }
-    } catch (err) {
-        failed.push(`${make.MakeName} ${year}: ${errorMessage(err)}`);
-    }
-});
-
-// --- Output ---------------------------------------------------------------
-
-const sorted = [...cars.values()].sort(
-    (a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.year - b.year,
+    },
+    (done) => {
+        if (done % 100 === 0 || done === jobs.length) process.stdout.write(`\r  ${done}/${jobs.length} requests`);
+    },
 );
+process.stdout.write("\n");
+
+// --- Output: rebuild cars.json from the whole cache -------------------------
+
+const lists: { year: number; models: Model[] }[] = [];
+for (const fileName of await readdir(CACHE_DIR)) {
+    const parsed = parseModelCacheName(fileName);
+    if (!parsed) continue;
+    try {
+        lists.push({ year: parsed.year, models: JSON.parse(await readFile(join(CACHE_DIR, fileName), "utf8")) as Model[] });
+    } catch {
+        console.warn(`Skipping unreadable cache file ${fileName}`);
+    }
+}
+const sorted = carsFromModelLists(lists);
+const years = sorted.map((c) => c.year);
 
 const output: CarsFile = {
     source: "NHTSA vPIC",
     scrapedAt: new Date().toISOString(),
-    years: [fromYear, toYear],
+    years: years.length ? [Math.min(...years), Math.max(...years)] : [fromYear, toYear],
     cars: sorted,
 };
 await writeAtomic(OUT_FILE, JSON.stringify(output, null, 2));
 
 const makesKept = new Set(sorted.map((c) => c.makeId)).size;
-console.log(`Makes queried: ${makes.length}, makes kept: ${makesKept}, cars: ${sorted.length}`);
+console.log(`Makes queried: ${makes.length}. cars.json (whole cache): ${makesKept} makes, ${sorted.length} cars`);
 console.log(`Requests fetched: ${stats.fetched}, from cache: ${stats.cached}`);
 if (failed.length) {
     console.error(`${failed.length} requests failed:\n  ${failed.join("\n  ")}`);
