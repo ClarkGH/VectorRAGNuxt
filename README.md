@@ -80,4 +80,5 @@ I only see cars, vans and SUVs are not scraped
 - [How it works](docs/rag.md): the pipeline, what we're seeding, and the vector math behind RAG
 - [API reference](docs/api.md): `POST /api/search`, `GET /api/catalog` and `GET /api/health`, with real examples and every error
 - [Runbook](docs/runbook.md): adding a model year, fixing or rewriting descriptions, changing the embedding model, starting the database over
+- [Measuring search quality](docs/evaluation.md): how we'll tell whether a change makes search better or worse (labeled searches, scores, win/loss rules), checked with a simulation
 - [Spec: Ingest + vector search](docs/specs/ingest-search.md): the plan for the "closest car" slice, including security, and where verification stands

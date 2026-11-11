@@ -47,6 +47,8 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 The integration tests use stand-in vectors, which prove the plumbing but say nothing about result quality. Results are known to be rough ("medium sedan" returns an SL-Class), and without a repeatable check, every change to `embeddingText`, the describe prompt or the model is judged by eye.
 
+**Method designed (2026-11-11):** [Measuring search quality](evaluation.md) covers the labeled searches, the scores (nDCG@5, Hit@1, MRR), and win/loss rules with a guardrail for exact-name searches, all checked with a simulation (about 20 searches is enough). The relevance check below is its pass/fail half; the scored `pnpm eval` is the other.
+
 ### 4. Dependabot and workflow permissions (parked with #1)
 
 `pnpm audit` has 4 known findings waiting on upstream fixes (S9), and nothing will say when the fixes land.

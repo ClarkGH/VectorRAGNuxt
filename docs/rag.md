@@ -61,7 +61,7 @@ flowchart LR
 | "something like a Kandi K27" | **Poor** | Obscure models only get "Lesser-known model", so there's little to match |
 | "family SUV", "pickup truck" | **None** | Those vehicles aren't in the data |
 
-These are expectations, not measurements yet; the table gets real scores once we've run each request.
+These are expectations, not measurements yet; the table gets real scores once we've run each request. How we'll measure them, and decide whether a change is a win, is in [Measuring search quality](evaluation.md).
 
 ## Cost
 

@@ -23,7 +23,7 @@ Everything in this spec is built and runs with a real OpenAI key. The automated 
 | Database only reachable from this computer | ✅ Passed |
 | The checks above run with one command (`pnpm check`); a CI workflow is written but not enabled on GitHub yet | ✅ Added 2026-11-11 |
 | Search page shows results in a browser | ✅ Real search ("corolla") and headless-browser screenshots |
-| Real-world match quality with OpenAI | ⏳ First results look right; the [what to expect](../rag.md#what-to-expect-from-results) table still needs real scores |
+| Real-world match quality with OpenAI | ⏳ First results look right; the [what to expect](../rag.md#what-to-expect-from-results) table still needs real scores. The measuring method is in [Measuring search quality](../evaluation.md) |
 
 *Stand-in vectors: the crash-test dummies of AI.*
 
