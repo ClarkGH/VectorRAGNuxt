@@ -34,7 +34,7 @@ flowchart LR
 **Every time someone searches:**
 
 3. **Place the request on the map:** the same AI model turns the request into a position.
-4. **Find the neighbours:** the database returns the cars closest to that position, best match first.
+4. **Find the neighbors:** the database returns the cars closest to that position, best match first.
 
 ## What's in the data
 
@@ -63,7 +63,7 @@ The biggest single improvement would be giving each car a short written descript
 
 ## Cost
 
-- **Setting up the map:** about 4,000 words' worth of AI processing for the whole catalogue. That costs **well under one cent** and only happens once, plus again whenever the car list changes. *Cheaper than a car wash, and you don't even have to vacuum the seats.*
+- **Setting up the map:** about 4,000 words' worth of AI processing for the whole catalog. That costs **well under one cent** and only happens once, plus again whenever the car list changes. *Cheaper than a car wash, and you don't even have to vacuum the seats.*
 - **Each search:** one tiny AI call, a fraction of a cent.
 - **Risk:** each search costs a little money, so the app must not be public until it has login or rate limits. For now it runs locally only.
 
@@ -88,6 +88,24 @@ The sections below are for engineers and the curious. Click to expand.
 - **One doc per make+model, not per year.** `"HONDA Civic"` is identical text in 2016 and 2024, so per-year docs would produce 11 identical vectors and flood the results. Grouping turns 4,414 rows into 673 docs, each with a `years` array.
 - vPIC files SUVs and vans as "multipurpose passenger vehicle" and pickups as "truck"; we scrape type "car" only.
 - Largest makes by row count: BMW 302, Audi 201, ARMBRUSTER STAGEWAY 176 (a limo builder).
+
+</details>
+
+<details>
+<summary>Code map</summary>
+
+| File | What it does |
+|---|---|
+| `scripts/scrape-cars.ts` | `pnpm scrape`: vPIC → `data/cars.json`, with a resumable response cache in `data/.cache/` |
+| `scripts/ingest-cars.ts` | `pnpm ingest`: groups rows into models, embeds only new or changed ones, upserts, ensures the vector index and waits until it's queryable |
+| `shared/utils/embedding.ts` | **The one place** that defines the embedding model, dimensions, text format, collection and index names, and `embedTexts()`. Ingest and search both use it |
+| `shared/types/car.ts` | `Car` (scraped row), `CarModel` / `CarDoc` (Mongo), `SearchResult` (API) |
+| `server/utils/db.ts` | `getDb()`: one shared Mongo connection; a failed connect is retried on the next call |
+| `server/utils/openai.ts` | `getOpenAI()`: one shared OpenAI client, created on first use |
+| `server/api/search.post.ts` | `POST /api/search`: JSON-only (S1), strict validation (S2), embed + `$vectorSearch`, generic errors (S6) |
+| `app/pages/index.vue` | Search box and result cards (Nuxt UI) |
+
+**Testing without an OpenAI key:** the SDK honors `OPENAI_BASE_URL`, so pointing it at a local stand-in `/v1/embeddings` server exercises everything except real match quality. That's how this slice was verified.
 
 </details>
 
