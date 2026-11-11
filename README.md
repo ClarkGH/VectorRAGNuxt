@@ -63,16 +63,6 @@ As a User
 When I submit a prompt for a van
 I only see cars, vans and SUVs are not scraped
 
-## TODO
-
-- ~~Seed scraped car data into local mongoDB~~
-- ~~Create NUXT RAG layer~~ (retrieval half done, working with a real key)
-- ~~Car descriptions~~ and ~~year filtering~~
-- Fill in real scores in the [what to expect](docs/rag.md#what-to-expect-from-results) table
-- ???
-- Chat Gippity
-- Profit
-
 ## Tech Stack
 
 - Nuxt 4 with Nuxt UI
