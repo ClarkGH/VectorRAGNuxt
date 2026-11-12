@@ -43,7 +43,7 @@ A CI workflow that runs all of them (`.github/workflows/ci.yml`) exists locally 
 **`docker compose up` fails with "port is already allocated".** A Mongo container from before the compose file is still running: `docker rm -f vectorrag-mongo`, then retry.
 
 **`pnpm ingest` says the index isn't queryable / container logs say "Initial syncs are paused".**
-Mongo's search engine (mongot) stops building indexes when its disk is over **85%** full, and only starts again below **80%**. `docker-compose.yml` keeps mongot's index in memory (`tmpfs`) instead, where that check passes. That's safe because mongot rebuilds its index from Mongo's data whenever the container starts (a few seconds for our 673 cars). If you see this with the compose file, check the container is the compose one (`docker compose ps`).
+Mongo's search engine (mongot) stops building indexes when its disk is over **85%** full, and only starts again below **80%**. `docker-compose.yml` keeps mongot's index in memory (`tmpfs`) instead, where that check passes. That's safe because mongot rebuilds its index from Mongo's data whenever the container starts (a few seconds for our 475 cars). If you see this with the compose file, check the container is the compose one (`docker compose ps`).
 
 **`pnpm describe` reports failures with "429" or "Rate limit reached".** Free-tier OpenAI accounts get 10 requests a minute and 50 a day on gpt-5-mini. The script sends 40 cars per request (17 for the whole catalog) and stops when the daily limit is hit. Re-run it later; it only does the missing ones. Adding billing to the OpenAI account raises the limits.
 

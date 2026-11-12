@@ -43,7 +43,7 @@ flowchart LR
 |---|---|
 | **Source** | The US government's free vehicle database ([NHTSA vPIC](https://vpic.nhtsa.dot.gov/api/)) |
 | **Covers** | Passenger cars, model years 2016–2026 |
-| **Size** | 673 car models from 149 manufacturers (4,414 model-year combinations) |
+| **Size** | 475 car models from 66 manufacturers (2,617 model-year combinations). vPIC lists 673 models from 149; 83 niche makers (limo, kit-car and replica builders) are left out, see [tech-debt #10](tech-debt.md#10-remove-niche-makers-from-the-dataset) |
 | **Each car has** | Manufacturer, model name, the years it was sold, and a short **AI-written** description |
 
 **What's missing, and why it matters:**
@@ -88,9 +88,9 @@ The sections below are for engineers and the curious. Click to expand.
 
 - Pipeline: `pnpm scrape` (vPIC → `data/cars.json`) → `pnpm describe` (`gpt-5-mini` → `data/descriptions.json`) → `pnpm ingest` (group, embed, upsert into Mongo) → `POST /api/search` (pull out years, embed the rest, `$vectorSearch` with a `years` pre-filter).
 - Embedding model: OpenAI `text-embedding-3-small`, 1,536 dimensions. The text embedded per model is `"{make} {model}. {description}"`, e.g. `"HONDA Civic. Compact sedan/hatchback known for reliability…"` (about 40 tokens), or just the name if there's no description.
-- **One doc per make+model, not per year.** `"HONDA Civic"` is identical text in 2016 and 2024, so per-year docs would produce 11 identical vectors and flood the results. Grouping turns 4,414 rows into 673 docs, each with a `years` array.
+- **One doc per make+model, not per year.** `"HONDA Civic"` is identical text in 2016 and 2024, so per-year docs would produce 11 identical vectors and flood the results. Grouping turns 2,617 rows into 475 docs (4,414 into 673 before niche makers were left out), each with a `years` array.
 - vPIC files SUVs and vans as "multipurpose passenger vehicle" and pickups as "truck"; we scrape type "car" only.
-- Largest makes by row count: BMW 302, Audi 201, ARMBRUSTER STAGEWAY 176 (a limo builder).
+- Largest makes by row count: BMW 302, Audi 201, Scuderia Cameron Glickenhaus 140. (Before niche makers were left out, a limo builder, ARMBRUSTER STAGEWAY, was third with 176.)
 
 </details>
 
@@ -101,6 +101,7 @@ The sections below are for engineers and the curious. Click to expand.
 |---|---|
 | `scripts/scrape-cars.ts` | `pnpm scrape` CLI: fetches from vPIC into a resumable cache (`data/.cache/`), then rebuilds `data/cars.json` from the whole cache |
 | `scripts/lib/scrape.ts` | Pure scraper helpers: vPIC types, safe cache names (S8), rows from cached model lists |
+| `scripts/lib/niche-makes.ts` | The 83 makers left out of the dataset (spec decision 3), by vPIC make id |
 | `scripts/describe-cars.ts` | `pnpm describe` CLI: batches of 40, resumable, saves after every batch, stops on the daily limit |
 | `scripts/lib/describe.ts` | Description prompt, schema and checks (`cleanDescription`, P1–P6); `describeCars()` keeps only valid answers for cars it asked about |
 | `scripts/screenshot.ts` | `pnpm screenshot`: headless-Chromium screenshots of the search page, with `/api/search` mocked unless `--real` |
@@ -201,7 +202,7 @@ The Civic scores 0.98 and the BMW 0.68. A score of 0.5 means unrelated. Real sco
 
 ### 6. Exact vs approximate search
 
-Brute force means computing the dot product with every stored vector: $673 \times 1536 \approx 1$ million multiplications, about a millisecond. At millions of vectors that's too slow, so Mongo's index uses **HNSW**, a layered graph that a search walks greedily toward the query. It only visits a fraction of the vectors, at the cost of being *approximate*. `numCandidates` is the dial: explore more candidates for better recall but a slower query. Mongo suggests 10–20× `limit`.
+Brute force means computing the dot product with every stored vector: $475 \times 1536 \approx 0.7$ million multiplications, about a millisecond. At millions of vectors that's too slow, so Mongo's index uses **HNSW**, a layered graph that a search walks greedily toward the query. It only visits a fraction of the vectors, at the cost of being *approximate*. `numCandidates` is the dial: explore more candidates for better recall but a slower query. Mongo suggests 10–20× `limit`.
 
 ### 7. Why bare names are weak, and what descriptions change
 

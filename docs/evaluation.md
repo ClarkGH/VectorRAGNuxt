@@ -134,8 +134,54 @@ The golden set is [eval/golden.json](../eval/golden.json). Each entry has `revie
 - **The gain is all in concept searches, as expected.** "hot hatch" 0.49 → 0.85, "cheap reliable car" 0.00 → 0.48, "fuel efficient hybrid" 0.23 → 0.53. Name, trim and year searches were already near perfect.
 - **The draft labels miss right answers, which understates concept scores.** Described search returned sensible cars the labels don't list: Hyundai Accent and Chevy Sonic for "cheap reliable car", Prius C and Prius Prime for "fuel efficient hybrid", Scion FR-S (the same car as the Toyota 86) for "small sports car", Ford Fusion for "midsize family sedan", Lincoln Continental and Toyota Crown for "luxury sedan". "Luxury sedan" (0.68 → 0.58) and "electric car" (0.16 → 0.05) look worse mostly for this reason. **The label review should add these variants, then re-run** (48 embeddings calls).
 - **The predicted name trade-off is real, but small.** "civic type r" now shows two RUF "CTR" cars at #3 and #4 (trim nDCG 0.96 → 0.83 for that search), and "golf r" picks up a Nissan GT-R. The descriptions dilute the name. Exact-name searches didn't suffer, so the guardrail held.
-- **Niche makers whose names contain the search words get in the way**, with or without descriptions: "ELECTRIC MOBILE CARS Electric Mobile Cars" is #1 for "electric car", and "MK SPORTSCARS" and "CLASSIC SPORTS CARS" lead "small sports car". This is the trigger for the spec's decision 3 ("hide niche manufacturers only if they get in the way").
+  - **Expect more dilution as the catalog grows.** Every car added is another vector that can sit close to a short query. A name search like "civic type r" has only a few words to match on, so the more cars there are with similar names or similar descriptions ("hot hatch", "track-focused"), the more of them can push into the top 5. Adding model years, vans and SUVs, or more makers should come with a re-run of the eval, watching trim nDCG and the exact-name guardrail.
+- **Niche makers whose names contain the search words get in the way**, with or without descriptions: "ELECTRIC MOBILE CARS Electric Mobile Cars" is #1 for "electric car", and "MK SPORTSCARS" and "CLASSIC SPORTS CARS" lead "small sports car". This triggered the spec's decision 3, and Clark decided on 2026-11-12 to **remove them from the dataset**. It's at the top of the [tech-debt list](tech-debt.md#10-remove-niche-makers-from-the-dataset).
 - **Scores can't flag a non-match.** Out-of-catalog and nonsense searches score close to real ones: with descriptions, "pickup truck" 0.76 and "family suv" 0.75, against 0.81 for the first result of a labeled search ("asdf qwerty" 0.61). The gap is even smaller than names-only (0.86 vs 0.78). A "no good match" cutoff on the score wouldn't work; rank order is what's meaningful.
+
+### After removing niche makers (2026-11-12)
+
+79 niche makers (176 models) were removed from the dataset ([tech-debt #10](tech-debt.md#10-remove-niche-makers-from-the-dataset)), both databases were re-ingested, and both labels re-run as `names-only-no-niche` and `described-no-niche`. Same golden set, same rules. These are new runs, kept apart from the first ones, so the data change and the description change can each be credited separately.
+
+| nDCG@5 | Names only | Described | Call |
+|---|---|---|---|
+| Before removal | 0.71 | 0.78 | **WIN**, +0.068 (+0.005 to +0.137) |
+| After removal | 0.74 | 0.79 | **INCONCLUSIVE**, +0.056 (−0.016 to +0.132) |
+| Removal alone, described | 0.78 → 0.79 | | INCONCLUSIVE, +0.014 (+0.000 to +0.042), below the 0.05 bar |
+| After the 4 more (83 makers, `*-no-niche-2`) | 0.74 | **0.80** | **INCONCLUSIVE**, +0.064 (−0.008 to +0.139) |
+
+**What changed:**
+
+- **Removal helped names-only more than described.** Names-only "electric car" went 0.16 → 0.37 and "small sports car" 0.00 → 0.25; described "small sports car" went 0.15 → 0.44. Matching on names alone is what the niche makers exploited, so taking them out lifted the baseline more, and the gap between the two narrowed.
+- **The descriptions win is no longer certain.** Part of the first win was descriptions working around niche-maker noise. The gain is still positive (+0.056, all of it in concept searches), but the interval now includes zero.
+- **Label gaps now drive the verdict.** Described "electric car" scores **0.05** while its top 5 is BMW i5, Chevy Bolt EUV, VW e-Golf, BMW i4 and BYD e6: all real EVs, but only the i4 is labeled (as a 1, at #4). Until the golden set lists the cars a person would accept, concept scores measure the labels as much as the search. **The label review is now the next step that matters most.**
+- **The rule missed niche makers that gpt-5-mini could describe** (removed in a second pass, below), because their model names are real-car names: HERITAGE (Mustang and Camaro replicas, #3 and #4 for "muscle car", and #1 for "1965 mustang"), ARMBRUSTER STAGEWAY (16 limousines), EMA (a limousine) and COBRA CARS (replicas). 
+
+**Second pass (same day):** Clark removed those four too (22 models, 475 left), recorded as `names-only-no-niche-2` and `described-no-niche-2`. "muscle car" (described) went 0.72 → 0.89, now Mustang, Challenger, Mustang GTD, Corvette, Camaro; the Ford Mustang is #1 for "1965 mustang". Names-only didn't move (none of the four had names matching a golden search). Overall still **INCONCLUSIVE**, +0.064 (−0.008 to +0.139), just short of a win. The label review comes next; see the [runbook](runbook.md#review-the-golden-set).
+
+### Golden set review (2026-11-12)
+
+Clark reviewed the AI-drafted labels twice. Nothing has been re-scored yet; this is a log of the review itself and what it taught.
+
+**First pass.** Every search was set to `reviewed: true` with no labels changed. The review hadn't happened yet, and the flag claimed it had. All flags went back to `false`, and the runbook gained a step-by-step [Review the golden set](runbook.md#review-the-golden-set), including a printout that shows car names (the file only holds ids, which made it hard to review).
+
+**Second pass.**
+- **Exact, trim and year searches: done, and good.** Clark set a rule: the more specific the search, the narrower the label. "honda civic" accepts the Civic Si and Type R as 1s; "civic type r", "gr corolla", "golf r" and the year searches list only the exact car. Every id checked out.
+- **Concept searches: to redo.** 6 of the 8 ended up as exactly the described run's top 5, and to fit five slots, clearly right cars were removed: the Teslas, Leaf and Bolt EV from "electric car", Camry and Accord from "midsize family sedan", Civic from "cheap reliable car", GR86 and 86 from "small sports car", Golf R from "hot hatch". Re-scoring the saved runs against these labels (on the computer, no API calls) showed the effect:
+
+  | Concept nDCG@5 | Names only | Described |
+  |---|---|---|
+  | Draft labels | 0.34 | 0.50 |
+  | Second-pass labels | 0.43 | **0.96** |
+
+  Described scored nearly perfect because its results *were* the answer key. The compare would have called a large WIN that measured only "how much does each run look like the described run".
+- **Smaller slips:** an id that isn't a car (`460-1893`, Ford's make id with the Challenger's model id), two grades typed as strings (`"1"`), labels added to floor searches (the eval ignores them), and a find-and-replace that changed the `about` text.
+
+**Lessons learned:**
+1. **A label is every right answer, not the top 5.** Search being good doesn't make its results the answer key. Labels have to come from what a shopper means, then search is checked against them.
+2. **Grading from one system's output builds in that system's win.** This is the same reason Claude doesn't grade its own drafts: whoever produced the results can't also set the bar. Pooling both runs' results helps only if they're used as *suggestions*.
+3. **A `reviewed` flag is a claim.** Set it only after the work, or it hides that the work is missing.
+4. **Check labels before spending on runs.** Re-scoring saved runs against new labels is free and caught this before any API calls. Signs of trouble: labels identical to one run's top 5, every concept car a 2, right answers removed.
+5. **Label changes can quietly change the rules.** Grading variants as 1 on exact searches means Hit@1 would count a variant at #1 as a hit, which loosens the exact-name guardrail. That's a decision to make before the re-run ([TODO](tech-debt.md#clarks-todos)).
 
 This extends the relevance check (`pnpm test:relevance`, built 2026-11-11, see the [runbook](runbook.md#check-search-quality)): it has pass/fail checks for known cases; this adds scores that can be compared across changes.
 

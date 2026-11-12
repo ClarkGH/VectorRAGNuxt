@@ -3,7 +3,8 @@
 //
 // The flags choose what to *fetch*. cars.json is always rebuilt from everything
 // in data/.cache, so a partial run adds to the data instead of replacing it.
-// Delete data/.cache to start over.
+// Delete data/.cache to start over. Niche makers (lib/niche-makes.ts) are
+// neither fetched nor written.
 import { mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -16,6 +17,7 @@ import {
     type Model,
     type VpicResponse,
 } from "./lib/scrape.ts";
+import { NICHE_MAKES } from "./lib/niche-makes.ts";
 import { errorMessage, pool, writeAtomic } from "./lib/util.ts";
 
 const API = "https://vpic.nhtsa.dot.gov/api/vehicles";
@@ -105,6 +107,8 @@ let makes = await cachedResults<Make>("makes", `${API}/GetMakesForVehicleType/ca
 // MakeId ends up in cache file paths, so don't trust it to be a number (S8;
 // modelCacheName also refuses non-integers).
 makes = makes.filter((m) => Number.isInteger(m.MakeId));
+const listed = makes.length;
+makes = makes.filter((m) => !NICHE_MAKES.has(m.MakeId));
 if (args.makes) {
     const wanted = new Set(args.makes.split(",").map((m) => m.trim().toLowerCase()));
     makes = makes.filter((m) => wanted.has(m.MakeName.toLowerCase()));
@@ -112,7 +116,7 @@ if (args.makes) {
     const missing = [...wanted].filter((m) => !found.has(m));
     if (missing.length) console.warn(`Warning: no vPIC car make named ${missing.join(", ")}`);
 }
-console.log(`${makes.length} makes, years ${fromYear}-${toYear}`);
+console.log(`${makes.length} makes (${listed - makes.length} niche makers left out), years ${fromYear}-${toYear}`);
 
 const jobs: { make: Make; year: number }[] = [];
 for (const make of makes) {
@@ -148,7 +152,8 @@ for (const fileName of await readdir(CACHE_DIR)) {
         console.warn(`Skipping unreadable cache file ${fileName}`);
     }
 }
-const sorted = carsFromModelLists(lists);
+// Niche makers can still be in an older cache, so filter here too.
+const sorted = carsFromModelLists(lists, NICHE_MAKES);
 const years = sorted.map((c) => c.year);
 
 const output: CarsFile = {

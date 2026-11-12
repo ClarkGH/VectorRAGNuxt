@@ -42,8 +42,8 @@ export function parseSearchBody(body: unknown): { query: string; limit: number }
 // A single typed year matches models sold within this many years of it.
 export const YEAR_WINDOW = 2;
 
-// Only 1980-2099 count as model years, so names like "1955 Custom Belair"
-// (a kit car in the data) are searched by meaning, not filtered out.
+// Only 1980-2099 count as model years, so "1965 mustang" or a name like
+// "1955 Custom Belair" is searched by meaning, not filtered to nothing.
 const YEAR = String.raw`(?:19[89]\d|20\d\d)`;
 const YEAR_RE = new RegExp(String.raw`\b${YEAR}\b`, "g");
 // What to strip from the text we embed: a range ("2016-2019", "from 2016 to

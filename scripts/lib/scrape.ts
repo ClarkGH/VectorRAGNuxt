@@ -25,11 +25,16 @@ export function parseModelCacheName(fileName: string): { makeId: number; year: n
     return { makeId: Number(match[1]), year: Number(match[2]) };
 }
 
-// Flattens cached model lists into sorted, de-duplicated car rows.
-export function carsFromModelLists(lists: { year: number; models: Model[] }[]): Car[] {
+// Flattens cached model lists into sorted, de-duplicated car rows, leaving out
+// the makers in `excludeMakeIds` (see niche-makes.ts).
+export function carsFromModelLists(
+    lists: { year: number; models: Model[] }[],
+    excludeMakeIds: { has(makeId: number): boolean } = new Set<number>(),
+): Car[] {
     const cars = new Map<string, Car>();
     for (const { year, models } of lists) {
         for (const m of models) {
+            if (excludeMakeIds.has(m.Make_ID)) continue;
             cars.set(`${m.Make_ID}-${m.Model_ID}-${year}`, {
                 make: m.Make_Name.trim(),
                 makeId: m.Make_ID,

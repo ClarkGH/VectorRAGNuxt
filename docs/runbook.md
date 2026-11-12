@@ -26,6 +26,8 @@ pnpm ingest   → Mongo + vector index    (a fraction of a cent; embeddings)
 
 **Check:** ingest prints `Models: N, embedded: …`, and a search for a new model finds it.
 
+**New makers:** a new year can bring new limo or kit-car builders. If one shows up in the results where it shouldn't, add its make id to [`scripts/lib/niche-makes.ts`](../scripts/lib/niche-makes.ts) and run all three steps again. To bring a left-out maker back, delete its line and do the same.
+
 ## Fix a wrong description
 
 **When:** a description in the results is wrong, misleading, or odd.
@@ -99,7 +101,57 @@ For scores that can be compared across changes (nDCG, Hit@1), see the next secti
    Each run prints a table by kind of search and saves `data/eval/<label>.json`.
 3. Compare, baseline first: `pnpm eval compare names-only described`. It prints both tables, the nDCG change with its 95% interval, the exact-name guardrail, and **WIN**, **LOSS** or **INCONCLUSIVE**.
 
-**Editing the golden set:** [eval/golden.json](../eval/golden.json). Car ids are `makeId-modelId` (look them up in `data/cars.json`). Set `reviewed: true` on entries a person has checked. After editing it, re-run *both* labels before comparing: a comparison only pairs searches present in both runs.
+**Editing the golden set:** [eval/golden.json](../eval/golden.json). Car ids are `makeId-modelId` (look them up in `data/cars.json`). Set `reviewed: true` on entries a person has checked. After editing it, re-run *both* labels before comparing: a comparison only pairs searches present in both runs. For a full review, see the next section.
+
+## Review the golden set
+
+**When:** the labels are AI-drafted, or the catalog changed a lot. The scores are only as good as the labels: a right car that isn't labeled counts as a miss, so an incomplete label makes good search look bad. On 2026-11-12, described "electric car" scored 0.05 with five real EVs in its top 5, because only one of them was labeled.
+
+**What a label is:** for each search, the cars a shopper who typed it would be happy to see.
+
+| Grade | Means | Example for "electric car" |
+|---|---|---|
+| **2** | Exactly what they asked for | Tesla Model 3, Nissan Leaf |
+| **1** | Acceptable; they wouldn't mind | A plug-in hybrid, or a pricey EV like the Taycan |
+| (not listed) | Wrong | A gas car, a limousine |
+
+The grade is about the car and the words typed, never about where search put it.
+
+**About an hour, at no cost.** You don't need any API calls until step 6.
+
+1. **Start over honestly.** In `eval/golden.json`, set every `"reviewed": true` back to `false`. The flag means "a person has checked this", so it should only be true once you have.
+2. **Print the labels with names.** The file holds only ids, which is why it's hard to review raw. Run this from the project root (it reads `data/` only, free):
+   ```bash
+   node -e '
+   const g = require("./eval/golden.json"), cars = require("./data/cars.json").cars;
+   const runs = process.argv.slice(1).map((l) => require(`./data/eval/${l}.json`));
+   const name = Object.fromEntries(cars.map((c) => [`${c.makeId}-${c.modelId}`, `${c.make} ${c.model}`]));
+   for (const q of g.queries.filter((q) => q.relevant)) {
+     console.log(`\n${q.query}  (${q.kind}, reviewed: ${q.reviewed})`);
+     for (const [id, grade] of Object.entries(q.relevant)) console.log(`  ${grade}  ${id.padEnd(12)} ${name[id] ?? "NOT IN DATASET"}`);
+     const found = new Set(runs.flatMap((r) => r.queries.find((x) => x.query === q.query)?.ids ?? []));
+     for (const id of found) if (!(id in q.relevant)) console.log(`  ?  ${id.padEnd(12)} ${name[id]}`);
+   }' names-only-no-niche-2 described-no-niche-2
+   ```
+   For each search it lists the labeled cars with their grades, then marks with `?` every car that either run returned in its top 5 but isn't labeled. The last two arguments are the runs to take those cars from. Use the latest run of *each* version, so neither one's results set the labels on its own.
+3. **First pass: check what's listed,** before looking at the `?` lines. Read the search and ask what a shopper means by it. Is every listed car right, and is its grade right? Remove wrong ones; fix grades. `NOT IN DATASET` means the car was removed (for example a niche maker) and the label should go.
+4. **Second pass: grade the `?` cars.** For each one, ask the same question as if you'd thought of it yourself: would this shopper be happy to see it? Add it with a 2 or 1 if so; leave it out if not. Then think of right cars that *neither* run found, and add those too. Look up their ids in `data/cars.json`. Known gaps from the first run: Hyundai Accent `498-2773` and Chevy Sonic `467-1835` (cheap reliable car); Prius C `448-13823` and Prius Prime `448-21950` (fuel efficient hybrid); Scion FR-S `448-2315` (small sports car); Ford Fusion `460-1780` (midsize family sedan); Lincoln Continental `464-5192` and Toyota Crown `448-31077` (luxury sedan); Chevy Bolt EUV `467-30005` (electric car).
+5. **Mark it.** Set `"reviewed": true` on each search once both passes are done. Leave the three floor searches alone; they have no labels.
+6. **Re-score both versions** under new labels, so the old runs stay for comparison (48 embeddings calls, a fraction of a cent):
+   ```bash
+   pnpm eval run --label names-only-reviewed --db vector_rag_names
+   pnpm eval run --label described-reviewed
+   pnpm eval compare names-only-reviewed described-reviewed
+   ```
+   No run says "draft labels" any more once all 21 are reviewed.
+
+**Keep it fair:**
+- **Grade before you look at scores.** Labels set while watching nDCG move turn into labels that make your favorite version win. That's why step 3 comes before the `?` lines, and why step 2 pools both runs.
+- **Be consistent across searches.** If the Prius C is a 2 for "fuel efficient hybrid", the Prius Prime probably is too. If a plug-in counts for "electric car", say so once and apply it everywhere.
+- **The more specific the search, the narrower the label** (Clark's rule, 2026-11-12). A general search accepts variants: for "honda civic" the Civic is a 2 and the Civic Si and Type R are 1s. A specific search doesn't: "civic type r" lists only the Type R. RUF "CTR" stays out of both.
+- **Add, don't replace, and there's no limit of five.** A label is every car a shopper would accept, even if that's twelve. The top 5 is how search is scored, not how many right answers exist.
+- **Never copy a run's top 5 into the labels.** It looks right because it mostly *is* right, but then that run scores near 1.0 by definition. Check afterwards: if a search's labels are exactly one run's top 5, regrade it.
+- **Don't touch the rules** (`minGain`, the guardrail) in the same sitting. The labels are the thing being fixed; the rules were set before any results.
 
 **Clean up** the baseline database when done: `docker compose exec mongo mongosh vector_rag_names --quiet --eval "db.dropDatabase()"`.
 

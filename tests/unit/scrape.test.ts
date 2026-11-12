@@ -34,4 +34,10 @@ describe("carsFromModelLists", () => {
             "HONDA Civic 2020",
         ]);
     });
+
+    it("leaves out excluded makers", () => {
+        const kit: Model = { Make_ID: 12948, Make_Name: "1955 CUSTOM BELAIR", Model_ID: 34020, Model_Name: "1955 Custom Belair" };
+        const cars = carsFromModelLists([{ year: 2020, models: [m("Civic", 1863), kit] }], new Set([12948]));
+        expect(cars.map((c) => c.model)).toEqual(["Civic"]);
+    });
 });

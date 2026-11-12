@@ -111,7 +111,7 @@ curl -s http://localhost:3000/api/catalog
 ```
 
 ```json
-{ "models": 673, "years": [2016, 2026] }
+{ "models": 475, "years": [2016, 2026] }
 ```
 
 `years` is `null` when the collection is empty. If Mongo is unreachable it returns a 502 with `Catalog is unavailable right now`, and the page falls back to wording without numbers. The type is `CatalogSummary` in [`shared/types/car.ts`](../shared/types/car.ts).

@@ -75,10 +75,12 @@ describe.skipIf(!ready)("relevance (real embeddings)", () => {
             }
         });
 
-        it("a year inside a name: \"1955 Custom Belair\" isn't filtered, and the kit car is found", async () => {
-            expect(parseYearFilter("1955 Custom Belair").years).toBeNull();
-            const results = await search("1955 Custom Belair", "check");
-            expect(results.map((car) => car.model)).toContain("1955 Custom Belair");
+        // Was "1955 Custom Belair" (a kit car) until niche makers were removed (2026-11-12).
+        // Checks the year handling only: a replica (HERITAGE Mustang) can outrank Ford's.
+        it("an old year isn't a filter: \"1965 mustang\" is searched as text and finds the Mustang", async () => {
+            expect(parseYearFilter("1965 mustang").years).toBeNull();
+            const results = await search("1965 mustang", "check");
+            expect(results.slice(0, 3).map(name)).toContain("FORD Mustang");
         });
 
         it("make plus a vague size: \"small honda\" returns mostly Hondas", async () => {

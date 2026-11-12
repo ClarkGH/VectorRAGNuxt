@@ -112,7 +112,7 @@ Writing descriptions for the whole catalog costs a few cents, once. Loading cost
 
 1. **Write a short description for each car?** **Yes.** Bare names match descriptive requests poorly, and the cost is cents. The descriptions are AI-written, so the page labels them that way.
 2. **Should "2018 Accord" filter by year?** **Yes, with a range:** one year means two years either side; two years mean exactly that range.
-3. **Hide niche manufacturers?** **Only if they get in the way.** Not done yet.
+3. **Hide niche manufacturers?** **Only if they get in the way.** They did: the first eval (2026-11-12) found niche makers leading "electric car" and "small sports car" ([first results](../evaluation.md#first-results-2026-11-12)). **Decided 2026-11-12: remove them from the dataset.** Done the same day: 83 makers left out, 475 models left. Details: [tech-debt #10](../tech-debt.md#10-remove-niche-makers-from-the-dataset).
 
 ---
 
