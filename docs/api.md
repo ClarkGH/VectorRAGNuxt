@@ -118,7 +118,7 @@ curl -s http://localhost:3000/api/catalog
 
 ## `GET /api/health`
 
-Says the server is up. It doesn't check Mongo or OpenAI.
+Says the server is up and can reach Mongo. It doesn't check OpenAI, since that would spend a request on every check.
 
 ```bash
 curl -s http://localhost:3000/api/health
@@ -127,3 +127,5 @@ curl -s http://localhost:3000/api/health
 ```json
 { "status": "ok" }
 ```
+
+If Mongo is unreachable it returns a **503** with `Database is unavailable right now`, and the reason goes to the server log only (S6).

@@ -2,7 +2,7 @@
 
 **In one sentence:** to know whether a change makes search better, we score it against a fixed list of searches with known good answers, using rules we write down before looking at the results.
 
-**Status (2026-11-11):** the method is designed and checked with a simulation. It hasn't been run on the real search yet: that needs the labeled queries (below) and the AI descriptions finished for every car (only 10 of 673 have them). The plan to build it is tech-debt [#3](tech-debt.md#3-no-relevance-check-with-real-embeddings-28).
+**Status (2026-11-12):** built and run. `pnpm eval` scores search against [eval/golden.json](../eval/golden.json), and the first comparison says **descriptions are a narrow win** ([first results](#first-results-2026-11-12)). Those numbers are **provisional**: the golden set's labels are AI-drafted and haven't been reviewed by a person yet, and the review is already known to need more right answers. Its pass/fail half, the relevance check (`pnpm test:relevance`), is built and passing; see the [runbook](runbook.md#check-search-quality).
 
 ## Why bother
 
@@ -27,7 +27,7 @@ The questions this answers:
 About 20 searches, each with the cars that count as right answers, graded: **2** = exactly right, **1** = acceptable. Everything else counts as 0.
 
 ```json
-{ "query": "small reliable sedan", "relevant": { "448-2208": 2, "474-1863": 2, "448-2229": 1 } }
+{ "query": "small reliable sedan", "relevant": { "448-2208": 2, "474-1863": 2, "448-2464": 1 } }
 ```
 
 It covers every kind of request the app handles:
@@ -103,16 +103,41 @@ Repeating each scenario on 200 freshly made-up sets of searches, at different si
 
 **What the simulation can't tell us:** whether descriptions actually help. The quality levels were made up, so it proves the *method*, not the result. The real answer needs the labeled searches and a real run.
 
-## Running it for real (planned)
+## Running it
 
-1. **Finish the descriptions:** `pnpm describe`, then `pnpm ingest` (see the [runbook](runbook.md)).
-2. **Write the golden set:** about 20 labeled searches covering every kind in the table above.
-3. **Build two databases from the same data**, one ingested with descriptions and one without, so both versions answer the same searches.
-4. **A `pnpm eval --label <name>` script** runs the set against a database, prints the scores per kind of search, and saves them so runs can be compared and given a win/loss/inconclusive call.
+Steps are in the [runbook](runbook.md#score-search-quality). In short:
 
-**Cost:** one embeddings call per search, so a full run is a fraction of a cent. It doesn't use the gpt-5-mini daily limit at all.
+1. **Two databases from the same data:** `pnpm ingest` (with descriptions) and `pnpm ingest --db vector_rag_names --names-only` (the baseline).
+2. **Score each:** `pnpm eval run --label names-only --db vector_rag_names` and `pnpm eval run --label described`. Each run is saved to `data/eval/<label>.json` (not committed).
+3. **Compare, baseline first:** `pnpm eval compare names-only described` prints both tables and the win/loss/inconclusive call.
 
-This extends the relevance check planned in [tech-debt #3](tech-debt.md#3-relevance-check): that plan has pass/fail checks for known cases; this adds scores that can be compared across changes.
+**Cost:** one embeddings call per search, 24 per run, a fraction of a cent. It doesn't use the gpt-5-mini daily limit at all.
+
+The golden set is [eval/golden.json](../eval/golden.json). Each entry has `reviewed: false` until a person has checked it, and every run reminds you how many are still drafts. The code is [scripts/eval.ts](../scripts/eval.ts) (the command) and [scripts/lib/eval.ts](../scripts/lib/eval.ts) (the metrics and rules, unit-tested against the worked example in the appendix).
+
+## First results (2026-11-12)
+
+**Provisional:** the labels are AI-drafted and not yet reviewed (see "what the results showed" below). All 673 cars described; 21 labeled searches plus 3 floor searches; `text-embedding-3-small`.
+
+| Kind | n | nDCG@5, names only → described | Hit@1 | MRR | Recall@5 |
+|---|---|---|---|---|---|
+| Exact name | 6 | 1.00 → 1.00 | 1.00 → 1.00 | 1.00 → 1.00 | 1.00 → 1.00 |
+| Trim | 3 | 0.99 → 0.94 | 1.00 → 1.00 | 1.00 → 1.00 | 1.00 → 0.83 |
+| Year filter | 4 | 0.94 → 0.99 | 1.00 → 1.00 | 1.00 → 1.00 | 1.00 → 1.00 |
+| Concept | 8 | **0.27 → 0.44** | 0.38 → 0.50 | 0.45 → 0.68 | 0.23 → 0.43 |
+| **All** | 21 | **0.71 → 0.78** | 0.76 → 0.81 | 0.79 → 0.88 | 0.71 → 0.76 |
+
+**The call: WIN, narrowly.** nDCG@5 +0.068, 95% interval +0.005 to +0.137; the exact-name guardrail held (no drop). The interval's lower end is close to zero, so this is the "probably real, size uncertain" kind of win.
+
+**What the results showed, beyond the score:**
+
+- **The gain is all in concept searches, as expected.** "hot hatch" 0.49 → 0.85, "cheap reliable car" 0.00 → 0.48, "fuel efficient hybrid" 0.23 → 0.53. Name, trim and year searches were already near perfect.
+- **The draft labels miss right answers, which understates concept scores.** Described search returned sensible cars the labels don't list: Hyundai Accent and Chevy Sonic for "cheap reliable car", Prius C and Prius Prime for "fuel efficient hybrid", Scion FR-S (the same car as the Toyota 86) for "small sports car", Ford Fusion for "midsize family sedan", Lincoln Continental and Toyota Crown for "luxury sedan". "Luxury sedan" (0.68 → 0.58) and "electric car" (0.16 → 0.05) look worse mostly for this reason. **The label review should add these variants, then re-run** (48 embeddings calls).
+- **The predicted name trade-off is real, but small.** "civic type r" now shows two RUF "CTR" cars at #3 and #4 (trim nDCG 0.96 → 0.83 for that search), and "golf r" picks up a Nissan GT-R. The descriptions dilute the name. Exact-name searches didn't suffer, so the guardrail held.
+- **Niche makers whose names contain the search words get in the way**, with or without descriptions: "ELECTRIC MOBILE CARS Electric Mobile Cars" is #1 for "electric car", and "MK SPORTSCARS" and "CLASSIC SPORTS CARS" lead "small sports car". This is the trigger for the spec's decision 3 ("hide niche manufacturers only if they get in the way").
+- **Scores can't flag a non-match.** Out-of-catalog and nonsense searches score close to real ones: with descriptions, "pickup truck" 0.76 and "family suv" 0.75, against 0.81 for the first result of a labeled search ("asdf qwerty" 0.61). The gap is even smaller than names-only (0.86 vs 0.78). A "no good match" cutoff on the score wouldn't work; rank order is what's meaningful.
+
+This extends the relevance check (`pnpm test:relevance`, built 2026-11-11, see the [runbook](runbook.md#check-search-quality)): it has pass/fail checks for known cases; this adds scores that can be compared across changes.
 
 ---
 

@@ -2,8 +2,8 @@
 // Security requirements (S1, S2) are in docs/specs/ingest-search.md.
 import type { Db } from "mongodb";
 import type OpenAI from "openai";
-import type { CarDoc, SearchResult, YearRange } from "../../shared/types/car";
-import { CARS_COLLECTION, CARS_VECTOR_INDEX, embedTexts } from "../../shared/utils/embedding";
+import type { CarDoc, SearchResult, YearRange } from "../../shared/types/car.ts";
+import { CARS_COLLECTION, CARS_VECTOR_INDEX, embedTexts } from "../../shared/utils/embedding.ts";
 
 export const SEARCH_MAX_QUERY_LENGTH = 500;
 export const SEARCH_DEFAULT_LIMIT = 5;

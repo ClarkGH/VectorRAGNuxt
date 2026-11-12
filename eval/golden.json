@@ -1,0 +1,74 @@
+{
+  "about": "Labeled searches for pnpm eval (docs/evaluation.md). Grades: 2 = exactly right, 1 = acceptable; unlisted cars count as 0. Keys are car _ids (makeId-modelId). 'floor' searches have no right answer: their top score should sit well below real searches. DRAFT labels written by Claude on 2026-11-12: a person reviews each one and sets reviewed: true, so the AI isn't grading its own homework.",
+  "version": 1,
+  "queries": [
+    { "kind": "exact", "query": "honda civic", "relevant": { "474-1863": 2 }, "reviewed": true },
+    { "kind": "exact", "query": "toyota corolla", "relevant": { "448-2208": 2 }, "reviewed": true },
+    { "kind": "exact", "query": "bmw m3", "relevant": { "452-1710": 2 }, "reviewed": true },
+    { "kind": "exact", "query": "tesla model 3", "relevant": { "441-17834": 2 }, "reviewed": true },
+    { "kind": "exact", "query": "mazda mx-5", "relevant": { "473-2072": 2 }, "reviewed": true },
+    { "kind": "exact", "query": "ford mustang", "relevant": { "460-1781": 2 }, "reviewed": true },
+
+    { "kind": "trim", "query": "civic type r", "relevant": { "474-31535": 2, "474-1863": 1 }, "reviewed": true },
+    { "kind": "trim", "query": "gr corolla", "relevant": { "448-31079": 2, "448-2208": 1 }, "reviewed": true },
+    { "kind": "trim", "query": "golf r", "relevant": { "482-13844": 2, "482-13670": 1, "482-3133": 1 }, "reviewed": true },
+
+    { "kind": "year", "query": "2018 accord", "relevant": { "474-1861": 2 }, "reviewed": true },
+    { "kind": "year", "query": "2017 corolla im", "relevant": { "448-15800": 2, "448-2208": 1 }, "reviewed": true },
+    { "kind": "year", "query": "2020 mustang", "relevant": { "460-1781": 2 }, "reviewed": true },
+    { "kind": "year", "query": "2019 veloster n", "relevant": { "498-28077": 2, "498-2298": 1 }, "reviewed": true },
+
+    {
+      "kind": "concept",
+      "query": "cheap reliable car",
+      "relevant": { "448-2208": 2, "474-1863": 2, "498-2735": 1, "478-1907": 1, "499-2462": 1, "473-2074": 1, "448-2464": 1, "474-2127": 1 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "luxury sedan",
+      "relevant": { "449-2086": 2, "515-2182": 2, "582-3151": 2, "449-2081": 1, "515-2475": 1, "449-2085": 1 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "electric car",
+      "relevant": { "441-17834": 2, "441-1685": 2, "467-13672": 2, "478-1905": 2, "584-28090": 1, "10224-27554": 1, "10919-28593": 1, "452-29579": 1, "582-29994": 1 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "small sports car",
+      "relevant": { "473-2072": 2, "448-29364": 2, "448-13602": 2, "523-2238": 2 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "muscle car",
+      "relevant": { "460-1781": 2, "467-1829": 2, "476-1893": 2, "476-1895": 1 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "midsize family sedan",
+      "relevant": { "448-2469": 2, "474-1861": 2, "478-1904": 1, "498-2459": 1, "467-1834": 1, "448-2465": 1 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "hot hatch",
+      "relevant": { "482-13670": 2, "474-31535": 2, "448-31079": 2, "498-28077": 2, "482-13844": 2 },
+      "reviewed": true
+    },
+    {
+      "kind": "concept",
+      "query": "fuel efficient hybrid",
+      "relevant": { "448-2209": 2, "474-1870": 2, "498-21961": 2 },
+      "reviewed": true
+    },
+
+    { "kind": "floor", "query": "pickup truck", "reviewed": true, "note": "Outside the catalog: passenger cars only" },
+    { "kind": "floor", "query": "family suv", "reviewed": true, "note": "Outside the catalog: passenger cars only" },
+    { "kind": "floor", "query": "asdf qwerty", "reviewed": true, "note": "Nonsense" }
+  ]
+}

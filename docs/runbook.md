@@ -70,6 +70,39 @@ pnpm ingest              # re-embeds every car: a fraction of a cent
 
 Descriptions are safe: they're in `data/descriptions.json`, not in Mongo, so this doesn't cost any gpt-5-mini requests.
 
+## Check search quality
+
+**When:** before and after changing anything that affects ranking: `embeddingText`, the describe instructions, the embedding model, or the descriptions themselves.
+
+1. Make sure the database is current: `pnpm ingest`.
+2. `pnpm test:relevance`. It runs 8 real searches (8 embeddings calls, a tiny fraction of a cent) and prints the top 5 for each, with scores.
+3. Save the table, make the change, re-ingest, run it again, and compare.
+
+**Checks** fail the run: exact names, trims, the year filter, a year inside a car's name, and make-plus-size. **Watches** only print: "medium sedan", "pickup truck" and nonsense. They're known weak spots, so they can be seen improving without blocking anything. The queries are in [tests/relevance/search.test.ts](../tests/relevance/search.test.ts).
+
+For scores that can be compared across changes (nDCG, Hit@1), see the next section.
+
+## Score search quality
+
+**When:** deciding whether a change to ranking is a win: descriptions on or off, a new describe prompt, another embedding model. What the scores mean and how the call is made: [Measuring search quality](evaluation.md).
+
+1. Have both versions in their own database. For descriptions vs names only:
+   ```bash
+   pnpm ingest                                         # with descriptions, the app's database
+   pnpm ingest --db vector_rag_names --names-only      # baseline: names only
+   ```
+2. Score each one (24 embeddings calls per run, a fraction of a cent):
+   ```bash
+   pnpm eval run --label names-only --db vector_rag_names
+   pnpm eval run --label described
+   ```
+   Each run prints a table by kind of search and saves `data/eval/<label>.json`.
+3. Compare, baseline first: `pnpm eval compare names-only described`. It prints both tables, the nDCG change with its 95% interval, the exact-name guardrail, and **WIN**, **LOSS** or **INCONCLUSIVE**.
+
+**Editing the golden set:** [eval/golden.json](../eval/golden.json). Car ids are `makeId-modelId` (look them up in `data/cars.json`). Set `reviewed: true` on entries a person has checked. After editing it, re-run *both* labels before comparing: a comparison only pairs searches present in both runs.
+
+**Clean up** the baseline database when done: `docker compose exec mongo mongosh vector_rag_names --quiet --eval "db.dropDatabase()"`.
+
 ## Check the search page in a browser
 
 **When:** after changing the page, to see it without clicking around.

@@ -15,6 +15,7 @@
     "scrape": "node scripts/scrape-cars.ts",
     "describe": "node --env-file-if-exists=.env scripts/describe-cars.ts",
     "ingest": "node --env-file-if-exists=.env scripts/ingest-cars.ts",
+    "eval": "node --env-file-if-exists=.env scripts/eval.ts",
     "screenshot": "node scripts/screenshot.ts",
     "browser:install": "playwright install chromium-headless-shell",
     "typecheck": "nuxt typecheck && tsc -p scripts",
@@ -24,6 +25,7 @@
     "test": "vitest run tests/unit",
     "test:watch": "vitest tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:relevance": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run tests/relevance --silent=false",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
@@ -32,8 +34,7 @@
     "nuxt": "^4.6.4",
     "openai": "^7.53.0",
     "tailwindcss": "^4.3.5",
-    "vue": "^3.5.45",
-    "vue-router": "^4.6.4"
+    "vue": "^3.5.45"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",

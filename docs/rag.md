@@ -104,6 +104,9 @@ The sections below are for engineers and the curious. Click to expand.
 | `scripts/describe-cars.ts` | `pnpm describe` CLI: batches of 40, resumable, saves after every batch, stops on the daily limit |
 | `scripts/lib/describe.ts` | Description prompt, schema and checks (`cleanDescription`, P1–P6); `describeCars()` keeps only valid answers for cars it asked about |
 | `scripts/screenshot.ts` | `pnpm screenshot`: headless-Chromium screenshots of the search page, with `/api/search` mocked unless `--real` |
+| `scripts/eval.ts` | `pnpm eval run` / `compare`: scores search against `eval/golden.json` and makes the win/loss call |
+| `scripts/lib/eval.ts` | Metrics (nDCG@5, Hit@1, MRR, Recall@5), paired bootstrap, and the win/loss rules from [evaluation.md](evaluation.md) |
+| `eval/golden.json` | The labeled searches; `reviewed: false` until a person has checked each |
 | `scripts/lib/util.ts` | Shared CLI helpers: atomic writes, the worker pool |
 | `scripts/ingest-cars.ts` | `pnpm ingest` CLI: reads env and descriptions, connects, calls the ingest library |
 | `scripts/lib/ingest.ts` | Groups rows into models (with descriptions); embeds only new, changed, or other-model ones (`needsEmbedding`); upserts; removes stale models; creates or upgrades the vector index and waits until it's ready |

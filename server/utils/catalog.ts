@@ -1,8 +1,8 @@
 // What's in the cars collection, so the page never hard-codes the model years.
 // No h3/Nuxt imports, so it's integration-testable like search.ts.
 import type { Db } from "mongodb";
-import type { CarDoc, CatalogSummary } from "../../shared/types/car";
-import { CARS_COLLECTION } from "../../shared/utils/embedding";
+import type { CarDoc, CatalogSummary } from "../../shared/types/car.ts";
+import { CARS_COLLECTION } from "../../shared/utils/embedding.ts";
 
 export async function getCatalogSummary(db: Db): Promise<CatalogSummary> {
     const cars = db.collection<CarDoc>(CARS_COLLECTION);

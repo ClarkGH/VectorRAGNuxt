@@ -13,9 +13,9 @@ Everything in this spec is built and runs with a real OpenAI key. The automated 
 | Check | Result |
 |---|---|
 | Loading all 673 car models; a re-run costs nothing | ✅ Passed |
-| "honda civic" → Honda Civic first | ✅ Passed (stand-in vectors) |
-| "civic type r" ranks above plain Civic | ✅ Passed (stand-in vectors) |
-| "2018 accord" only shows models sold 2016–2020 | ✅ Passed (stand-in vectors) |
+| "honda civic" → Honda Civic first | ✅ Passed (stand-in vectors; real embeddings via `pnpm test:relevance`, 2026-11-11) |
+| "civic type r" ranks above plain Civic | ✅ Passed (stand-in vectors; real embeddings via `pnpm test:relevance`, 2026-11-11) |
+| "2018 accord" only shows models sold 2016–2020 | ✅ Passed (stand-in vectors; real embeddings via `pnpm test:relevance`, 2026-11-11) |
 | AI descriptions: bad or unrequested answers are thrown away | ✅ Passed |
 | Bad input gets a clear error, not a crash | ✅ Passed |
 | Requests from other websites rejected | ✅ Passed |
@@ -58,8 +58,8 @@ We've collected a list of 673 car models, but nothing uses it yet. This slice tu
 ## How we'll know it works
 
 - [ ] Setting up from scratch loads all 673 car models; running setup again changes nothing and costs nothing.
-- [ ] Searching "honda civic" shows the Honda Civic first.
-- [ ] Searching "civic type r" ranks the Civic Type R above the plain Civic.
+- [x] Searching "honda civic" shows the Honda Civic first. ([relevance check](../../tests/relevance/search.test.ts))
+- [x] Searching "civic type r" ranks the Civic Type R above the plain Civic. ([relevance check](../../tests/relevance/search.test.ts))
 - [ ] An empty search, or asking for an absurd number of results, gets a clear error instead of a crash.
 - [ ] The search page shows results for a typed request, and a friendly error if the server is down.
 - [ ] Nothing the app sends to the browser exposes internal data or our AI key.
