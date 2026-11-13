@@ -51,6 +51,8 @@ export type LabeledScore = {
     rr: number;
     recall: number;
     ndcg: number;
+    // Grade of the #1 result (0 if unlisted), for the guardrail. Missing from runs saved before 2026-11-13.
+    top1Grade?: number;
 };
 export type FloorScore = { kind: "floor"; query: string; ids: string[]; topScore: number };
 export type QueryScore = LabeledScore | FloorScore;
@@ -66,6 +68,7 @@ export function scoreQuery(q: LabeledQuery | FloorQuery, ids: string[], scores: 
         rr: reciprocalRank(grades),
         recall: recallAtK(grades, q.relevant),
         ndcg: ndcgAtK(grades, q.relevant),
+        top1Grade: grades[0] ?? 0,
     };
 }
 
@@ -87,7 +90,10 @@ export const isLabeled = (s: QueryScore): s is LabeledScore => s.kind !== "floor
 
 export const RULES = {
     minGain: 0.05, // smallest nDCG@5 gain worth the cost of a change
-    guardrail: { kind: "exact" as const, maxHit1Drop: 0.1 }, // exact names mustn't get worse
+    // Exact names mustn't get worse. Only the exact car counts at #1 (grade 2): exact
+    // searches grade variants as 1 (Civic Si for "honda civic"), and a variant on
+    // top is the failure this guards against. Decided 2026-11-13, before the reviewed re-run.
+    guardrail: { kind: "exact" as const, top1Grade: 2, maxHit1Drop: 0.1 },
     bootstrapIters: 10_000,
 };
 
@@ -125,6 +131,11 @@ export type Comparison = {
     reason: string;
 };
 
+// 1 if the exact car (grade 2) is #1. Runs saved before top1Grade existed only had
+// grade-2 labels on exact searches, so their Hit@1 means the same thing.
+export const exactAt1 = (s: LabeledScore) =>
+    ((s.top1Grade ?? (s.hit1 ? RULES.guardrail.top1Grade : 0)) >= RULES.guardrail.top1Grade ? 1 : 0);
+
 // B against A (A is the baseline). Only searches present in both runs count.
 export function compareRuns(a: EvalRun, b: EvalRun): Comparison {
     const byQuery = new Map(a.queries.filter(isLabeled).map((s) => [s.query, s]));
@@ -136,7 +147,7 @@ export function compareRuns(a: EvalRun, b: EvalRun): Comparison {
     const delta = mean(diffs);
     const ci = bootstrapCI(diffs);
     const guard = pairs.filter(([sa]) => sa.kind === RULES.guardrail.kind);
-    const guardrailDrop = mean(guard.map(([sa]) => sa.hit1)) - mean(guard.map(([, sb]) => sb.hit1));
+    const guardrailDrop = mean(guard.map(([sa]) => exactAt1(sa))) - mean(guard.map(([, sb]) => exactAt1(sb)));
 
     let call: Comparison["call"] = "INCONCLUSIVE";
     let reason = delta < RULES.minGain
@@ -144,7 +155,7 @@ export function compareRuns(a: EvalRun, b: EvalRun): Comparison {
         : "interval includes zero: could be which searches we picked";
     if (guardrailDrop > RULES.guardrail.maxHit1Drop) {
         call = "LOSS";
-        reason = `guardrail: exact-name Hit@1 fell ${guardrailDrop.toFixed(2)}`;
+        reason = `guardrail: exact car at #1 fell ${guardrailDrop.toFixed(2)}`;
     } else if (ci[1] < 0) {
         call = "LOSS";
         reason = "reliably worse (whole interval below zero)";

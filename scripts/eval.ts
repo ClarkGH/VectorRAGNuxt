@@ -128,7 +128,7 @@ async function compare() {
     const sign = (x: number) => `${x >= 0 ? "+" : ""}${x.toFixed(3)}`;
     console.log(`\n${newLabel} vs ${baseLabel}, ${c.paired} searches in both`);
     console.log(`  nDCG@5 change: ${sign(c.delta)}, 95% interval ${sign(c.ci[0])} to ${sign(c.ci[1])}`);
-    console.log(`  Guardrail (exact-name Hit@1 drop, max ${RULES.guardrail.maxHit1Drop}): ${pct(c.guardrailDrop)}`);
+    console.log(`  Guardrail (exact car at #1 on exact searches, drop max ${RULES.guardrail.maxHit1Drop}): ${pct(c.guardrailDrop)}`);
     console.log(`  ${c.call}: ${c.reason}`);
 }
 

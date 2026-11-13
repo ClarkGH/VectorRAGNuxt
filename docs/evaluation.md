@@ -66,7 +66,7 @@ Write these down first, so the goalposts can't move after seeing the numbers:
 | **Loss** | The confidence interval is entirely below zero, *or* a guardrail breaks |
 | **Inconclusive** | Anything else: the gain is too small to matter, or there aren't enough searches to tell |
 
-**Guardrail:** exact-name searches ("honda civic") can't lose more than 0.1 of their Hit@1. This exists because one change can help concept searches while quietly hurting name searches, and the average alone would hide it. We've seen a real hint of this: in an early "2018 acura" search, the one Acura with a description scored 80% while the bare-name Acuras scored 84–85%.
+**Guardrail:** exact-name searches ("honda civic") can't lose more than 0.1 of their **exact car at #1**: the share of them with a grade-2 car first. (Tightened 2026-11-13, before the reviewed re-run: exact searches now grade variants such as the Civic Si as 1, and plain Hit@1 would count a variant on top as a hit.) This exists because one change can help concept searches while quietly hurting name searches, and the average alone would hide it. We've seen a real hint of this: in an early "2018 acura" search, the one Acura with a description scored 80% while the bare-name Acuras scored 84–85%.
 
 **The confidence interval** comes from a *paired bootstrap*: both versions run the same searches, then we re-sample those searches thousands of times and see how much the average gain moves. Search is deterministic, so running it again changes nothing; the only uncertainty is *which searches we happened to write*, and that's exactly what this measures.
 
@@ -181,7 +181,7 @@ Clark reviewed the AI-drafted labels twice. Nothing has been re-scored yet; this
 2. **Grading from one system's output builds in that system's win.** This is the same reason Claude doesn't grade its own drafts: whoever produced the results can't also set the bar. Pooling both runs' results helps only if they're used as *suggestions*.
 3. **A `reviewed` flag is a claim.** Set it only after the work, or it hides that the work is missing.
 4. **Check labels before spending on runs.** Re-scoring saved runs against new labels is free and caught this before any API calls. Signs of trouble: labels identical to one run's top 5, every concept car a 2, right answers removed.
-5. **Label changes can quietly change the rules.** Grading variants as 1 on exact searches means Hit@1 would count a variant at #1 as a hit, which loosens the exact-name guardrail. That's a decision to make before the re-run ([TODO](tech-debt.md#clarks-todos)).
+5. **Label changes can quietly change the rules.** Grading variants as 1 on exact searches means Hit@1 would count a variant at #1 as a hit, which loosens the exact-name guardrail. Decided 2026-11-13, before the re-run: the guardrail now needs a grade-2 car at #1 (see [the rules](#3-win-loss-or-inconclusive-decided-before-running)).
 
 This extends the relevance check (`pnpm test:relevance`, built 2026-11-11, see the [runbook](runbook.md#check-search-quality)): it has pass/fail checks for known cases; this adds scores that can be compared across changes.
 

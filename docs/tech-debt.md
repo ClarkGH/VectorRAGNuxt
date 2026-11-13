@@ -74,7 +74,8 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
     - Fix `460-1893` under "muscle car" (not a car; the Dodge Charger is `476-1895`), the two `"1"` strings under "honda civic" and "toyota corolla", and the `about` text ("sets reviewed: false").
     - "fuel efficient hybrid": still `reviewed: false`; the Mirai is hydrogen fuel-cell, a 1 at most.
     - Floors ignore labels. Optionally turn "family suv" into a concept search, since vPIC lists the Volvo XC90 as a car.
-- [ ] **Decide before the re-run: tighten the exact-name guardrail?** Exact searches now grade variants as 1 (Civic Si for "honda civic"), so Hit@1 would count a variant at #1 as a hit. Proposed: for exact searches, Hit@1 needs a grade-2 car. Rules are set before results, so decide this before running `*-reviewed`.
+- [x] **Decide before the re-run: tighten the exact-name guardrail?** Exact searches now grade variants as 1 (Civic Si for "honda civic"), so Hit@1 would count a variant at #1 as a hit. Proposed: for exact searches, Hit@1 needs a grade-2 car. Rules are set before results, so decide this before running `*-reviewed`.
+  - Clark (2026-11-13): yes. Claude: done in `RULES.guardrail` ([scripts/lib/eval.ts](../scripts/lib/eval.ts)), with a unit test; old runs compare as before.
 - [x] **Decide on niche makers (spec decision 3):** decided 2026-11-12, remove them. Now [#10](#10-remove-niche-makers-from-the-dataset), top of the list.
 - [x] **Approve the removal rule for #10** ("every maker with no described models", 79 makers) and what to do about the "1955 Custom Belair" relevance check. Clark: Remove niche makers, they've now become a problem and log as needed.
   - Claude (2026-11-12): done, see [#10](#10-remove-niche-makers-from-the-dataset).

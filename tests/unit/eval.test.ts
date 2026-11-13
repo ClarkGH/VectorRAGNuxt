@@ -79,6 +79,19 @@ describe("compareRuns", () => {
         expect(c.call).toBe("LOSS"); // ...and it's still a loss
     });
 
+    it("LOSS by guardrail: a variant (grade 1) takes the exact car's #1 spot", () => {
+        // Hit@1 still says 1 (a labeled car is first), but it's the Civic Si, not the Civic.
+        const graded = (q: string, top1Grade: number) => ({ ...score(q, "exact", 1), top1Grade });
+        const before = run([...exact.map((q) => graded(q, 2)), ...concept.map((q) => score(q, "concept", 0.4))]);
+        const variantFirst = run([
+            ...exact.map((q, i) => graded(q, i < 3 ? 1 : 2)),
+            ...concept.map((q) => score(q, "concept", 0.7)),
+        ]);
+        const c = compareRuns(before, variantFirst);
+        expect(c.guardrailDrop).toBeCloseTo(0.5);
+        expect(c.call).toBe("LOSS");
+    });
+
     it("LOSS: reliably worse", () => {
         const worse = run([...exact.map((q) => score(q, "exact", 0.9)), ...concept.map((q) => score(q, "concept", 0.2))]);
         expect(compareRuns(base, worse).call).toBe("LOSS");
