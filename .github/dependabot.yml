@@ -1,0 +1,24 @@
+# Dependabot version updates. Security alerts and security updates are switched on
+# separately, in the repo's Settings → Code security.
+version: 2
+updates:
+  - package-ecosystem: "npm" # covers pnpm-lock.yaml too
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Skip versions until they've been out a few days, so a hijacked release is
+    # usually caught and pulled before it reaches us.
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
+    # One PR for every minor and patch update; majors get their own PRs, since
+    # those are the ones that break things.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
