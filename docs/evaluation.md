@@ -2,7 +2,7 @@
 
 **In one sentence:** to know whether a change makes search better, we score it against a fixed list of searches with known good answers, using rules we write down before looking at the results.
 
-**Status (2026-11-12):** built and run. `pnpm eval` scores search against [eval/golden.json](../eval/golden.json), and the first comparison says **descriptions are a narrow win** ([first results](#first-results-2026-11-12)). Those numbers are **provisional**: the golden set's labels are AI-drafted and haven't been reviewed by a person yet, and the review is already known to need more right answers. Its pass/fail half, the relevance check (`pnpm test:relevance`), is built and passing; see the [runbook](runbook.md#check-search-quality).
+**Status (2026-11-16):** built, labels reviewed, and re-run. `pnpm eval` scores search against [eval/golden.json](../eval/golden.json). On reviewed labels, **descriptions are a clear win** (nDCG@5 +0.168), but described search is **worse at telling "we don't carry that" apart from a real match**, which the G step has to handle ([results on reviewed labels](#results-on-reviewed-labels-2026-11-16)). The labels have known limits ([third pass](#third-pass-2026-11-16)). Its pass/fail half, the relevance check (`pnpm test:relevance`), is built and passing; see the [runbook](runbook.md#check-search-quality).
 
 ## Why bother
 
@@ -199,6 +199,50 @@ Clark reviewed the AI-drafted labels twice. Nothing has been re-scored yet; this
 **What production would do instead:** take labels from real shopper behavior (clicks, saves, inquiries in search logs), or have two domain experts label separately and measure how often they agree; keep a held-out set nobody tunes against. Not worth it for a learning project: hours of studying cars buys little here, and the process and lessons are logged so it can be redone properly.
 
 This extends the relevance check (`pnpm test:relevance`, built 2026-11-11, see the [runbook](runbook.md#check-search-quality)): it has pass/fail checks for known cases; this adds scores that can be compared across changes.
+
+## Results on reviewed labels (2026-11-16)
+
+How the eval got here, from draft labels to a result that can be trusted:
+
+```mermaid
+flowchart TD
+  a[AI-drafted labels<br/>2026-11-12] --> b[First runs: narrow WIN<br/>provisional]
+  b --> c[Review pass 1:<br/>flags set, no labels checked]
+  c -->|flags reset| d[Review pass 2:<br/>exact, trim, year good]
+  d --> e{Offline re-score<br/>free, no API calls}
+  e -->|concept labels = described's top 5<br/>described 0.96, rigged| f[Third pass 2026-11-16:<br/>trim goes wide, decided before running]
+  f --> g{Offline re-score}
+  g -->|still copied from search results| h[Catalog candidate list<br/>model names only, no runs, no descriptions]
+  h --> i[Concept labels: 7–66 cars each]
+  i --> j{Offline re-score}
+  j -->|names-only now loses on wrong cars,<br/>not unlabeled right ones| k[Real runs: 48 embeddings calls]
+  k --> l[WIN: nDCG@5 +0.168<br/>guardrail held]
+  k --> m[Caveat: floor gap halved<br/>~0.12 → ~0.06]
+  l --> n[Next: spec the G slice]
+  m -->|first G decision:<br/>how to say we don't carry that| n
+```
+
+Runs `names-only-reviewed` (db `vector_rag_names`) and `described-reviewed` (db `vector_rag`), text-embedding-3-small, 48 embeddings calls. They match the offline re-score exactly, so re-scoring saved runs is a trustworthy free check.
+
+| nDCG@5 | n | Names only | Described |
+|---|---|---|---|
+| Exact | 6 | 0.96 | 0.99 |
+| Trim | 3 | 1.00 | 1.00 |
+| Year | 4 | 0.91 | 1.00 |
+| Concept | 8 | 0.60 | 0.97 |
+| **All** | 21 | **0.82** | **0.99** |
+
+**The call: WIN.** nDCG@5 +0.168, 95% interval +0.075 to +0.276; the exact-name guardrail held (0.00 drop). Under the rules decided before running, that's a clear win, and most of it comes from concept searches.
+
+**Caveats, named rather than argued away:**
+- **The floor gap halved.** Floor searches should score well below real ones. Names-only: labeled searches average 0.85 vs 0.73–0.74 for "pickup truck" and "family suv" (a gap of about 0.12). Described: 0.81 vs 0.75 (about 0.06). "asdf qwerty" stays low in both (0.64, 0.60). Described search ranks better but is worse at signaling that nothing fits.
+- **Near-perfect scores (0.97–0.99) are where the shared-blind-spot risk would show up.** See the [third pass limits](#third-pass-2026-11-16).
+- **Small sample:** 21 searches, 8 concept searches, one labeler, which is why the interval is wide.
+- **Not measured:** search over human-curated content, such as editor-written categories. Clark's read is that curation would still do better than this; that's a hypothesis for a future comparison, not a result.
+
+**What this means for the G step:** generation turns weak retrieval into confident wrong answers ("great pickup options include the Ford Taurus"). The usual guard is a gate that answers "we don't carry that" when the top score is too low. With a gap of about 0.06, a score threshold alone risks false refusals (too tight) or hallucinations (too loose). The first G decision is how the system knows it has nothing good to say: a score threshold, a prompt that allows "none of these fit," or both. Decide it when the G slice is specced, using these floor scores.
+
+**Eval work is done for now.** Next: spec the G slice.
 
 ---
 
