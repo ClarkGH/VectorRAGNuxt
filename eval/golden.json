@@ -1,17 +1,17 @@
 {
-  "about": "Labeled searches for pnpm eval (docs/evaluation.md). Grades: 2 = exactly right, 1 = acceptable; unlisted cars count as 0. Keys are car _ids (makeId-modelId). 'floor' searches have no right answer: their top score should sit well below real searches. DRAFT labels written by Claude on 2026-11-12: a person reviews each one and sets reviewed: false, so the AI isn't grading its own homework.",
+  "about": "Labeled searches for pnpm eval (docs/evaluation.md). Grades: 2 = exactly right, 1 = acceptable; unlisted cars count as 0. Keys are car _ids (makeId-modelId). 'floor' searches have no right answer: their top score should sit well below real searches. DRAFT labels written by Claude on 2026-11-12: a person reviews each one and sets reviewed: true, so the AI isn't grading its own homework.",
   "version": 1,
   "queries": [
-    { "kind": "exact", "query": "honda civic", "relevant": { "474-1863": 2, "474-29417": 1, "474-31535": "1" }, "reviewed": true },
-    { "kind": "exact", "query": "toyota corolla", "relevant": { "448-2208": 2, "448-31079": 1, "448-15800": "1" }, "reviewed": true },
-    { "kind": "exact", "query": "bmw m3", "relevant": { "452-1710": 2 }, "reviewed": true },
-    { "kind": "exact", "query": "tesla model 3", "relevant": { "441-17834": 2 }, "reviewed": true },
-    { "kind": "exact", "query": "mazda mx-5", "relevant": { "473-2072": 2 }, "reviewed": true },
-    { "kind": "exact", "query": "ford mustang", "relevant": { "460-1781": 2, "460-35300": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "honda civic", "relevant": { "474-1863": 2, "474-29417": 1, "474-31535": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "toyota corolla", "relevant": { "448-2208": 2, "448-31079": 1, "448-15800": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "bmw m3", "relevant": { "452-1710": 2, "452-9570": 1, "452-2024": 1, "452-26485": 1, "452-36379": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "tesla model 3", "relevant": { "441-17834": 2, "441-10199": 1, "441-1685": 1, "441-27027": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "mazda mx-5", "relevant": { "473-2072": 2, "473-2074": 1, "473-2153": 1 }, "reviewed": true },
+    { "kind": "exact", "query": "ford mustang", "relevant": { "460-1781": 2, "460-14930": 1, "460-2346": 1, "460-35300": 1, "460-31551": 1 }, "reviewed": true },
 
-    { "kind": "trim", "query": "civic type r", "relevant": { "474-31535": 2 }, "reviewed": true },
-    { "kind": "trim", "query": "gr corolla", "relevant": { "448-31079": 2 }, "reviewed": true },
-    { "kind": "trim", "query": "golf r", "relevant": { "482-13844": 2 }, "reviewed": true },
+    { "kind": "trim", "query": "civic type r", "relevant": { "474-31535": 2, "474-29417": 1 }, "reviewed": true },
+    { "kind": "trim", "query": "gr corolla", "relevant": { "448-31079": 2, "448-2208": 1, "448-15800": 1, "448-2207": 1 }, "reviewed": true },
+    { "kind": "trim", "query": "golf r", "relevant": { "482-13844": 2, "482-13670": 1, "482-3133": 1 }, "reviewed": true },
 
     { "kind": "year", "query": "2018 accord", "relevant": { "474-1861": 2 }, "reviewed": true },
     { "kind": "year", "query": "2017 corolla im", "relevant": { "448-15800": 2 }, "reviewed": true },
@@ -21,50 +21,50 @@
     {
       "kind": "concept",
       "query": "cheap reliable car",
-      "relevant": { "448-2208": 2, "498-2773": 2, "467-1835": 2, "467-1828": 2, "481-2164": 2 },
+      "relevant": { "448-2208":2, "498-2773":2, "467-1835":2, "467-1828":2, "481-2164":2, "474-1863":2, "448-2464":2, "448-24949":2, "448-13603":2, "474-2127":2, "473-2153":2, "473-2074":2, "498-2735":2, "499-2299":2, "499-2462":2, "499-34783":2, "478-1894":2, "478-1898":2, "478-1907":2, "481-2342":2, "481-13842":2, "523-2235":2, "448-2209":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "luxury sedan",
-      "relevant": { "515-2182": 2, "464-5192": 2, "475-2149": 2, "448-31077": 1, "449-2086": 2 },
+      "relevant": { "515-2182":2, "464-5192":2, "475-2149":2, "448-31077":1, "449-2086":2, "515-2180":2, "515-2475":2, "449-2081":2, "449-29045":2, "449-30229":2, "452-1720":2, "452-1721":2, "452-1722":2, "452-1723":2, "452-2804":2, "452-13835":2, "452-26482":2, "452-29051":2, "452-32327":2, "452-30512":2, "452-20815":2, "452-29050":2, "452-13834":2, "452-21792":2, "452-1715":2, "452-2585":2, "452-20813":2, "452-1716":2, "452-2231":2, "452-5195":2, "452-20811":2, "452-34628":2, "452-1718":2, "452-20814":2, "452-32328":2, "582-3151":2, "582-29708":2, "582-27122":2, "582-34062":2, "582-3678":2, "582-3148":2, "582-3677":2, "5083-12580":2, "5083-12579":2, "498-2056":2, "498-2774":2, "499-3184":2, "469-10297":2, "469-26603":2, "469-1827":2, "469-1825":2, "464-1794":2, "442-2242":2, "442-2285":2, "443-1699":2, "443-11445":2, "584-7994":2, "583-9823":2, "583-9822":2, "445-1690":2, "445-1689":2, "485-13798":2, "480-1903":2, "480-2038":2, "10919-28593":2, "441-1685":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "electric car",
-      "relevant": { "452-32328": 2, "467-30005": 2, "482-8118": 2, "452-29579": 2, "1991-4394": 2 },
+      "relevant": { "467-13672":2, "452-32328":2, "467-30005":2, "482-8118":2, "452-29579":2, "1991-4394":2, "441-17834":2, "441-1685":2, "441-10199":2, "441-27027":2, "478-1905":2, "452-2178":2, "452-30512":2, "492-33815":2, "498-31360":2, "498-36896":2, "498-21961":2, "10224-27554":2, "10919-28593":2, "449-29045":2, "449-30229":2, "584-28090":2, "582-29994":2, "582-28998":2, "582-35659":2, "478-30884":2, "473-29125":2, "481-2339":2, "504-24758":2, "445-32329":2, "469-34303":2, "11921-30772":2, "11921-37326":2, "11346-29433":2, "771-3937":2, "771-3938":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "small sports car",
-      "relevant": { "448-2315": 2, "473-2072": 2, "523-2238": 2, "474-29417": 2, "492-11448": 2 },
+      "relevant": { "448-2315":2, "473-2072":2, "523-2238":2, "474-29417":2, "492-11448":2, "448-13602":2, "448-29364":2, "584-31222":2, "584-31224":2, "584-31223":2, "584-7847":2, "584-7900":2, "582-3145":2, "582-3861":2, "582-4016":2, "452-1725":2, "449-11452":2, "449-2080":2, "493-2035":2, "466-33271":2, "466-1795":2, "478-1906":2, "478-30039":2, "448-3647":2, "452-9567":2, "539-35113":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "muscle car",
-      "relevant": { "460-1781": 2, "476-1893": 2, "467-1831": 2, "460-1893": 2, "467-1829": 2 },
+      "relevant": { "460-1781":2, "476-1893":2, "467-1831":2, "460-35300":2, "467-1829":2, "476-1895":2, "11832-33560":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "midsize family sedan",
-      "relevant": { "460-1782": 2, "498-2459": 2, "478-1904": 2, "460-1780": 2, "482-3134": 2 },
+      "relevant": { "460-1782":2, "498-2459":2, "478-1904":2, "460-1780":2, "482-3134":2, "448-2469":2, "474-1861":2, "499-2739":2, "499-27527":2, "467-1834":2, "473-2078":2, "523-2232":2, "477-2053":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "hot hatch",
-      "relevant": { "474-31535": 2, "498-28077": 2, "448-31079": 2, "582-8173": 2, "482-13670": 2 },
+      "relevant": { "474-31535":2, "498-28077":2, "448-31079":2, "582-8173":2, "482-13670":2, "482-3140":2, "482-13844":2 },
       "reviewed": true
     },
     {
       "kind": "concept",
       "query": "fuel efficient hybrid",
-      "relevant": { "448-13823": 2, "474-1870": 2, "448-10198": 2, "498-21961": 2, "448-2209": 2 },
-      "reviewed": false
+      "relevant": { "448-21950":2, "448-13823":2, "474-1870":2, "498-21961":2, "448-2209":2, "448-13822":2, "460-3462":2, "515-3154":2, "448-31077":2 },
+      "reviewed": true
     },
 
     { "kind": "floor", "query": "pickup truck", "relevant": { "771-3937": 1, "482-24230": 1, "468-17844": 1 }, "reviewed": true, "note": "Outside the catalog: passenger cars only" },

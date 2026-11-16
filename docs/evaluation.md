@@ -183,6 +183,21 @@ Clark reviewed the AI-drafted labels twice. Nothing has been re-scored yet; this
 4. **Check labels before spending on runs.** Re-scoring saved runs against new labels is free and caught this before any API calls. Signs of trouble: labels identical to one run's top 5, every concept car a 2, right answers removed.
 5. **Label changes can quietly change the rules.** Grading variants as 1 on exact searches means Hit@1 would count a variant at #1 as a hit, which loosens the exact-name guardrail. Decided 2026-11-13, before the re-run: the guardrail now needs a grade-2 car at #1 (see [the rules](#3-win-loss-or-inconclusive-decided-before-running)).
 
+### Third pass (2026-11-16)
+
+**Decision, made before any re-run: trim labels go wide.** This reverses the second pass's narrow rule for trim searches. "civic type r", "gr corolla" and "golf r" keep the exact car as a 2 and grade close relatives as 1 (the Civic Si, the plain Corolla, the GTI). The reason: a shopper who types a trim is still happy to see its siblings, and leaving them unlabeled scored good results as misses. The guardrail still covers only exact searches, so a trim sibling at #1 costs nDCG but doesn't break a rule.
+
+**An offline re-score caught the same trap again.** Labels were edited from what search returned ("removed what I didn't find, added what I did"). Seven concept labels were still the described run's top 5, and the new exact and trim 1s also matched it. Re-scoring the saved runs: concept nDCG@5 0.42 names-only vs 0.96 described, exact 0.95 vs 0.99, trim 0.97 vs 1.00. Concept labels are being redone from a catalog candidate list (model names only, with neither run's output nor the AI descriptions), with the `?` cars as suggestions.
+
+**Concept labels redone.** Every "Fits" car from the candidate list was added as a 2 (Clark's call), keeping the grades already there. Labels now hold 7–66 cars instead of 4–6. Offline re-score, nDCG@5: concept 0.60 names-only vs 0.97 described; exact 0.96 vs 0.99; trim 1.00 vs 1.00; year 0.91 vs 1.00. Described still wins on concepts, but it no longer wins by construction: with labels far bigger than the top 5, matching them isn't automatic, and names-only now loses on genuinely wrong cars (a Kia Rondo minivan for "midsize family sedan", the Mercedes SL roadster for "luxury sedan"), not on unlabeled right ones. "Muscle car" is 1.00 for both.
+
+**Limits of these labels, stated plainly:**
+- **Not from shopper data.** The candidates came from catalog model names plus an AI's car knowledge (Claude). Clark set the rules and grades but isn't a car expert. That's why the first passes went wrong.
+- **A shared-blind-spot risk.** Described search uses AI-written descriptions (gpt-5-mini), and the candidate list is AI-drafted too. Claude never saw either run's output, so it can't favor one directly. But if both AIs hold the same mistaken idea about a car, the labels quietly agree with described's descriptions. This leans toward described, and nothing here measures it.
+- **Small and single-labeler.** There are 8 concept searches and one labeler, so expect a wide confidence interval.
+
+**What production would do instead:** take labels from real shopper behavior (clicks, saves, inquiries in search logs), or have two domain experts label separately and measure how often they agree; keep a held-out set nobody tunes against. Not worth it for a learning project: hours of studying cars buys little here, and the process and lessons are logged so it can be redone properly.
+
 This extends the relevance check (`pnpm test:relevance`, built 2026-11-11, see the [runbook](runbook.md#check-search-quality)): it has pass/fail checks for known cases; this adds scores that can be compared across changes.
 
 ---
