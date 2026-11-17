@@ -36,7 +36,7 @@ Stop Mongo with `docker compose down` (data is kept in a Docker volume; `down -v
 | `pnpm test:relevance` | Real searches against the real database and embeddings: 5 pass/fail checks plus 3 known weak spots, with a top-5 table to compare before and after a change. Run by hand; needs `pnpm ingest` done and the key. See the [runbook](docs/runbook.md#check-search-quality) |
 | `pnpm eval run` / `compare` | Scores search against the labeled searches in `eval/golden.json` (nDCG, Hit@1, MRR, Recall) and calls a change a win, loss or inconclusive. Run by hand; about 24 embeddings calls per run. See [Measuring search quality](docs/evaluation.md) and the [runbook](docs/runbook.md#score-search-quality) |
 
-A CI workflow that runs all of them (`.github/workflows/ci.yml`) exists locally but isn't pushed or enabled yet; for now, run `pnpm check` before you push.
+There's no CI: this is a local learning project, so run `pnpm check` before you push.
 
 ## Troubleshooting
 

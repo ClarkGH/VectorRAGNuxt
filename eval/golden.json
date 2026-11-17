@@ -1,5 +1,5 @@
 {
-  "about": "Labeled searches for pnpm eval (docs/evaluation.md). Grades: 2 = exactly right, 1 = acceptable; unlisted cars count as 0. Keys are car _ids (makeId-modelId). 'floor' searches have no right answer: their top score should sit well below real searches. DRAFT labels written by Claude on 2026-11-12: a person reviews each one and sets reviewed: true, so the AI isn't grading its own homework.",
+  "about": "Labeled searches for pnpm eval (docs/evaluation.md). Grades: 2 = exactly right, 1 = acceptable; unlisted cars count as 0. Keys are car _ids (makeId-modelId). 'floor' searches have no right answer: their top score should sit well below real searches. Labels were drafted by Claude and reviewed by a person (reviewed: true), so the AI isn't grading its own homework.",
   "version": 1,
   "queries": [
     { "kind": "exact", "query": "honda civic", "relevant": { "474-1863": 2, "474-29417": 1, "474-31535": 1 }, "reviewed": true },

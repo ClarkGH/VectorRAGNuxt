@@ -21,7 +21,7 @@ Everything in this spec is built and runs with a real OpenAI key. The automated 
 | Requests from other websites rejected | ✅ Passed |
 | Nothing internal sent to the browser | ✅ Passed |
 | Database only reachable from this computer | ✅ Passed |
-| The checks above run with one command (`pnpm check`); a CI workflow is written but not enabled on GitHub yet | ✅ Added 2026-11-11 |
+| The checks above run with one command (`pnpm check`); no CI, since this is a local learning project | ✅ Added 2026-11-11 |
 | Search page shows results in a browser | ✅ Real search ("corolla") and headless-browser screenshots |
 | Real-world match quality with OpenAI | ⏳ First results look right; the [what to expect](../rag.md#what-to-expect-from-results) table still needs real scores. The measuring method is in [Measuring search quality](../evaluation.md) |
 
@@ -105,7 +105,6 @@ The app is **local only**, and is known to be unsafe to deploy as-is (the README
 | **No security headers or content security policy** | Standard protection against injected scripts and framing | `nuxt-security` also sets these. Check the page still loads its self-hosted fonts afterwards |
 | **The dev server and DevTools** (added 2026-11-16) | The dev server and Nuxt DevTools are built for one developer on localhost. Past Vite and DevTools bugs let a web page read local files through them | Deploy only a production build (`pnpm build`, then `node .output/server/index.mjs`), which leaves DevTools out. Never expose `pnpm dev` with `--host` (S10). Keep Nuxt and Vite on patched versions |
 | **AI answers: limits are global, not per visitor** (added 2026-11-16; see [S14](generate.md#new-rules-for-this-slice-s11s16)) | The answer endpoint's "5 a minute" is a single global limit, which suits one local user. In public, one visitor could use up everyone's answers for the day | Per-IP or per-login limits on `/api/answer` alongside `/api/search` (same `nuxt-security` limiter), and a paid OpenAI tier with a budget cap, so the free tier's 50 a day isn't the ceiling |
-|
 
 ## Cost
 
@@ -242,7 +241,7 @@ How it's built. For how to call it (examples, every error), see the [API referen
 | S6 | Clients get a generic 502. The server logs `error.message` only, never request bodies, keys or full prompts | Avoids leaking internals and storing users' personal text |
 | S7 | Render text only with `{{ }}`. No `v-html` anywhere; turn on `vue/no-v-html` as a lint error | Vue escapes interpolation; `v-html` is the XSS hole, and it gets tempting once AI output arrives |
 | S8 | Scraper: check that `MakeId` and `year` are integers before building cache file paths | API data is untrusted input, and it's used to build filesystem paths (path traversal if it were ever `"../.."`) |
-| S9 | Dependencies: the lockfile is committed; run `pnpm audit` on upgrades; keep pnpm 10's default of not running dependency install scripts | Audit 2026-11-11: 4 findings (2 low, 2 moderate) in esbuild (Windows dev server only), deepmerge, glob and minimatch, all in build and lint tooling, none in the request path. Wait for upstream fixes |
+| S9 | Dependencies: the lockfile is committed; run `pnpm audit` on upgrades; keep pnpm 10's default of not running dependency install scripts | Audit 2026-11-17: 5 findings (1 low, 2 moderate, 2 high) in esbuild (Windows dev server only), glob, minimatch and picomatch, all in build, lint and font tooling, none in the request path. Dependabot (weekly, since 2026-11-16) opens PRs as upstream fixes land |
 | S10 | Dev server stays on localhost: no `--host`, no `NUXT_HOST=0.0.0.0` | A dev server holding a live API key shouldn't be reachable from the network |
 
 **Before anything is public:** login or per-IP rate limiting (the `nuxt-security` module provides a rate limiter, CSP and security headers), budget alerts on the OpenAI project, and a review of S1–S10 against the deployed setup.

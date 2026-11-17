@@ -1,6 +1,6 @@
 // Relevance check: real searches against the real ingested database and real embeddings.
 // Run by hand with `pnpm test:relevance` (needs `docker compose up -d`, `pnpm ingest`, and the key in .env).
-// Not part of `pnpm check` or CI. One embeddings call per query, 8 in all.
+// Not part of `pnpm check`. One embeddings call per query, 8 in all.
 //
 // Checks fail the run. Watches only print, for known weak spots, so they can be seen
 // improving without blocking anything. Plan and query choices: docs/tech-debt.md (#3).

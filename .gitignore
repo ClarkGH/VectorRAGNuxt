@@ -29,5 +29,5 @@ logs
 # Page screenshots (pnpm screenshot)
 screenshots
 
-# CI workflow: kept locally, not pushed until CI is wanted on GitHub (see docs/tech-debt.md #4)
+# Local-only CI workflow: this project doesn't run CI on GitHub
 .github/workflows/ci.yml
