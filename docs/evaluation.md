@@ -316,6 +316,22 @@ The spec budgeted one investigated re-run, and this was it.
 
 ---
 
+## Seen by hand: "gas efficient car" (2026-11-18)
+
+Clark searched "gas efficient car" and got 52% or less, with cars like the Prius. Search still has a way to go. Two separate problems, the second making the first look worse:
+
+| Search | Top 5 (score, shown as) |
+|---|---|
+| "gas efficient car" | Prius C 0.758 (52%), Chevrolet Spark 0.747, VW e-Golf 0.746, VW Jetta 0.745, Honda Insight 0.744 (all 49%) |
+| "fuel efficient hybrid" | Prius C 0.793 (59%), Prius 0.789, Insight 0.786, Prius Prime 0.779, Toyota Mirai 0.778 |
+
+1. **Ranking depends on wording.** The descriptions say "fuel efficiency" and "hybrid", never "gas", and the embedding doesn't link "gas" to "fuel" strongly. So "gas efficient car" misses the regular Prius, lets in an electric car (the e-Golf), and its top 5 sit within 0.014 of each other: close to a coin toss for order. The same intent, worded "fuel efficient hybrid", finds hybrids. The golden set has no search like this, so the eval never saw it.
+2. **The shown percentage reads as worse than it is.** The page rescales so that 0.5 (unrelated) is 0% ([rag.md §5](rag.md#5-what-mongos-score-means)). That's correct, but real searches land around 0.75–0.85, which shows as 50–70%. 52% looks like a coin flip to a shopper, though 0.758 is near a typical real search (top scores averaged about 0.81 on the reviewed labels).
+
+Not fixed; logged as [tech-debt #14](tech-debt.md#14-search-quality-on-everyday-wording). Before changing anything, add searches like this to the golden set (labels reviewed by Clark), so a fix is measured rather than eyeballed.
+
+---
+
 ## Appendix: the math
 
 <details>

@@ -28,6 +28,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
 | 13 | Searches that name a car outside the results get no answer | Code, UX | 2 | 1 | 2 | 12, stretch |
+| 14 | Search quality on everyday wording ("gas efficient car"), and match percentages that read low | Search, UX | 3 | 2 | 3 | 15 |
 | 10 | Niche makers crowd out real answers: remove them from the dataset | Data | 4 | 3 | 2 | done (83 makers) |
 | 4 | No Dependabot | Dependency | | | | done |
 | 3 | No relevance check with real embeddings | Test | 4 | 3 | 2 | done |
@@ -36,6 +37,15 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 6 | Two TypeScript aliases | Dependency | | | | done |
 | 8 | Year-range formatting written three times | Code | | | | done |
 | 2 | AI descriptions aren't backed up | Data | | | | won't do |
+
+### 14. Search quality on everyday wording
+
+**Found by hand, 2026-11-18** ([evaluation](evaluation.md#seen-by-hand-gas-efficient-car-2026-11-18)). "gas efficient car" tops out at 52% and misses the regular Prius, while "fuel efficient hybrid" finds the hybrids. Two problems:
+
+- **Ranking:** the descriptions never say "gas", and the embedding doesn't bridge "gas" and "fuel" well. Options, cheapest first: add searches like this to the golden set so it's measured; have descriptions mention common shopper words (a `pnpm describe` prompt change plus re-ingest, about 12 calls); or hybrid search, keyword plus vector, so exact words count too.
+- **Display:** real results land at 50–70% on the 0.5-is-unrelated scale, which reads as weak. Options: show a label instead of a number ("strong match", "close", "loose"), or scale against what real searches score rather than against 0.5 to 1. Either is a UX call, and Clark's.
+
+Measure first: no fix until the golden set has searches like this and a before score.
 
 ### 13. Searches that name a car outside the results
 
