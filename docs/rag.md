@@ -63,6 +63,17 @@ flowchart LR
 
 These are expectations, not measurements yet; the table gets real scores once we've run each request. How we'll measure them, and decide whether a change is a win, is in [Measuring search quality](evaluation.md).
 
+### When nothing is close
+
+Search always returns the nearest cars, even for nonsense. So when no result scores at least 0.65, the page says **"Nothing close to that in the catalog"** above them (the `nothingClose` flag in the [API](api.md#response-200)).
+
+| Gibberish: flagged | A near miss: not flagged |
+|---|---|
+| ![Search for "wakka wakka huba dooba": a "Nothing close to that in the catalog" notice above results at 20% and 18% match](images/nothing-close-flagged.png) | ![Search for "donkey shaped car": no notice, results at 40% and 38% match](images/nothing-close-near-miss.png) |
+| Top result 20% (score 0.60), under the line | Top result 40% (score 0.70), just over it, though nothing really fits |
+
+The right-hand case is why a score threshold alone can't say "we don't carry that": real near misses ("pickup truck" scores 0.75) land above it too. Those are left to the AI answer, which can say none of the cars fit ([G spec, decision 1](specs/generate.md#decisions-clarks-calls)).
+
 ## Cost
 
 - **Writing descriptions:** a few cents for the whole catalog, once. Only new cars are described on later runs.

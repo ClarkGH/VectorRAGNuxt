@@ -30,7 +30,9 @@ export type SearchResult = CarModel & { score: number };
 // Inclusive model-year range, [from, to].
 export type YearRange = [from: number, to: number];
 
-export type SearchResponse = { results: SearchResult[]; years: YearRange | null };
+// `nothingClose`: no result reached the answer gate's threshold (docs/specs/generate.md,
+// decision 1), so the page says so instead of implying a match.
+export type SearchResponse = { results: SearchResult[]; years: YearRange | null; nothingClose: boolean };
 
 // What's loaded, for the page's "model years …" text. `years` is null when empty.
 export type CatalogSummary = { models: number; years: YearRange | null };

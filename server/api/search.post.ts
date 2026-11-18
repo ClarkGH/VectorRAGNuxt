@@ -16,7 +16,7 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     const parsed = parseYearFilter(input.query);
     try {
         const results = await searchCars(await getDb(), getOpenAI(), parsed, input.limit);
-        return { results, years: parsed.years };
+        return { results, years: parsed.years, nothingClose: isNothingClose(results) };
     } catch (err) {
         // S6: details stay in the server log; the client gets a generic message.
         console.error("search failed:", err instanceof Error ? err.message : err);

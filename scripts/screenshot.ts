@@ -26,6 +26,7 @@ const { values: args } = parseArgs({
 const span = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 const mock: SearchResponse = {
     years: [2016, 2020],
+    nothingClose: false,
     results: [
         ["2208", "TOYOTA", "Corolla", span(2016, 2026), 0.853, "Compact sedan/hatchback in the mainstream price segment, known for fuel efficiency, reliability, and strong resale value."],
         ["40428", "TOYOTA", "GR Corolla", span(2023, 2026), 0.842, "Performance hot hatch known for its turbocharged three-cylinder engine and all-wheel drive."],

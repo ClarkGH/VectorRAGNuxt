@@ -4,6 +4,7 @@ import type { Db } from "mongodb";
 import type OpenAI from "openai";
 import type { CarDoc, SearchResult, YearRange } from "../../shared/types/car.ts";
 import { CARS_COLLECTION, CARS_VECTOR_INDEX, embedTexts } from "../../shared/utils/embedding.ts";
+import { GATE_THRESHOLD } from "./answer.ts";
 
 export const SEARCH_MAX_QUERY_LENGTH = 500;
 export const SEARCH_DEFAULT_LIMIT = 5;
@@ -74,6 +75,15 @@ export function parseYearFilter(query: string): ParsedQuery {
     // A query that was only a year keeps its text, since something has to be embedded.
     const text = query.replace(RANGE_PHRASE, " ").replace(YEAR_PHRASE, " ").replace(/\s+/g, " ").trim();
     return { text: text || query, years };
+}
+
+// --- Nothing close (docs/specs/generate.md, decision 1) ---------------------
+
+// True when no result reaches the answer gate's threshold, including when there
+// are no results. Same number as the gate, so search never says "close" about
+// results the answer step would refuse to look at.
+export function isNothingClose(results: readonly { score: number }[]) {
+    return !results.some((r) => r.score >= GATE_THRESHOLD);
 }
 
 // --- Search -----------------------------------------------------------------

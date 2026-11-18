@@ -5,7 +5,7 @@ import { MongoClient, type Collection, type Db } from "mongodb";
 import OpenAI from "openai";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ensureVectorIndex, groupModels, ingestModels } from "../../scripts/lib/ingest.ts";
-import { parseYearFilter, searchCars } from "../../server/utils/search.ts";
+import { isNothingClose, parseYearFilter, searchCars } from "../../server/utils/search.ts";
 import type { Car, CarDoc } from "../../shared/types/car.ts";
 import { CARS_COLLECTION, CARS_VECTOR_INDEX, EMBEDDING_DIMENSIONS } from "../../shared/utils/embedding.ts";
 import { fakeVector, startFakeOpenAI, type FakeOpenAI } from "../fixtures/fake-openai.ts";
@@ -77,6 +77,16 @@ describe("ingest + vector search", () => {
 
         const typeR = await search("civic type r", 3);
         expect(typeR.map((r) => r.model).slice(0, 2)).toEqual(["Civic Type R", "Civic"]);
+    });
+
+    // Mongo's own scores against the 0.65 gate. The stand-in vectors match by
+    // spelling, so a car's name scores near 1 and gibberish near 0.5 (unrelated).
+    it("flags a search with nothing close, using Mongo's scores", async () => {
+        expect(isNothingClose(await search("honda civic", 3))).toBe(false);
+
+        const junk = await search("qxzv wjkp", 3);
+        expect(junk.length).toBeGreaterThan(0);
+        expect(isNothingClose(junk)).toBe(true);
     });
 
     it("never returns server-only fields, and scores are in [0, 1]", async () => {

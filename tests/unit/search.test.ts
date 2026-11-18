@@ -1,7 +1,9 @@
 // S1 and S2 from docs/specs/ingest-search.md.
 import { describe, expect, it } from "vitest";
+import { GATE_THRESHOLD } from "../../server/utils/answer.ts";
 import {
     isJsonContentType,
+    isNothingClose,
     parseYearFilter,
     parseSearchBody,
     SEARCH_DEFAULT_LIMIT,
@@ -83,5 +85,19 @@ describe("parseYearFilter", () => {
         "20185 civic",
     ])("leaves %s unfiltered", (query) => {
         expect(parseYearFilter(query)).toEqual({ text: query, years: null });
+    });
+});
+
+describe("isNothingClose (generate.md decision 1)", () => {
+    const scores = (...s: number[]) => s.map((score) => ({ score }));
+
+    it("is false when any result reaches the threshold, at any rank", () => {
+        expect(isNothingClose(scores(0.81, 0.7))).toBe(false);
+        expect(isNothingClose(scores(0.6, GATE_THRESHOLD))).toBe(false);
+    });
+
+    it("is true when every result is below it, or there are none", () => {
+        expect(isNothingClose(scores(0.649, 0.6))).toBe(true);
+        expect(isNothingClose([])).toBe(true);
     });
 });

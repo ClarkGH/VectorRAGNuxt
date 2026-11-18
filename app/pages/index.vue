@@ -5,6 +5,7 @@ const query = ref("");
 const searched = ref("");
 const years = ref<YearRange | null>(null);
 const results = ref<SearchResult[] | null>(null);
+const nothingClose = ref(false);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -23,6 +24,7 @@ async function search() {
         const res = await $fetch("/api/search", { method: "POST", body: { query: q } });
         results.value = res.results;
         years.value = res.years;
+        nothingClose.value = res.nothingClose;
         searched.value = q;
     } catch {
         results.value = null;
@@ -141,6 +143,14 @@ function matchPercent(score: number) {
                 <h2 id="results-title">
                     Closest to “{{ searched }}”
                 </h2>
+                <p
+                    v-if="nothingClose"
+                    class="notice nothing-close"
+                >
+                    <span class="notice-title">Nothing close to that in the catalog.</span>
+                    These are the nearest cars anyway. The catalog has passenger cars only, so SUVs, vans and
+                    pickups won't match.
+                </p>
                 <p class="scale-note">
                     <template v-if="years">
                         Showing models sold in {{ formatYears(years) }}.
@@ -335,6 +345,9 @@ h1 {
 }
 .notice-title {
   font-weight: 700;
+}
+.nothing-close {
+  margin-top: 0.75rem;
 }
 
 h2 {

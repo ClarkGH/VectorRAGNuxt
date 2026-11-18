@@ -62,7 +62,8 @@ A real response, from the example request above:
       "score": 0.7000885605812073
     }
   ],
-  "years": [2016, 2020]
+  "years": [2016, 2020],
+  "nothingClose": false
 }
 ```
 
@@ -74,6 +75,7 @@ A real response, from the example request above:
 | `results[].embeddingText` | The exact text that was turned into the car's vector, useful for debugging matches |
 | `results[].score` | 0 to 1. **0.5 means unrelated**, so read it as a ranking rather than a percentage (see [the math](rag.md#5-what-mongos-score-means)) |
 | `years` | The year filter that was applied, `[from, to]`, or `null` if the query had no year |
+| `nothingClose` | `true` when no result scores at least **0.65**, including when there are no results. The results are still the nearest cars, but none is a real match ("pickup truck", "asdf"). Same threshold as the AI answer's gate ([G spec, decision 1](specs/generate.md#decisions-clarks-calls)), so the page can say "nothing close" without spending an AI call |
 
 The TypeScript types are `SearchResponse` and `SearchResult` in [`shared/types/car.ts`](../shared/types/car.ts). Inside the Nuxt app, `$fetch("/api/search", …)` infers them automatically.
 
