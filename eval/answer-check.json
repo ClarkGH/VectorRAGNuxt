@@ -1,7 +1,13 @@
 {
   "about": "The answer check (docs/specs/generate.md, decision 7): searches and pass rules for the AI answer, written and committed BEFORE the first run, so the bar can't be moved to fit the results. Run with pnpm answer-check (docs/runbook.md). About 11 chat calls per run. A failure is investigated and logged in docs/evaluation.md, never re-run until it passes.",
-  "version": 1,
+  "version": 2,
   "writtenAt": "2026-11-18",
+  "changes": [
+    "v1 (commit 9df67c4) failed its first run; that result stands and is logged in docs/evaluation.md.",
+    "v2: 'family suv' is removed from Refuses. The catalog has 27 crossovers, SUVs and vans (found by checking the descriptions), so the search has real matches and 'refuse' was the wrong expectation. It is NOT moved to Doesn't refuse: that would add a check already seen to pass, which is fitting the bar to the results.",
+    "v2: 'motorcycle' replaces it. Chosen from the data, not from any model answer: no catalog description mentions motorcycles (nor pickups, towing or buses; 'van' and 'truck' do appear), and its top search score, 0.700, reaches the gate, so the check really asks the model. The prompt doesn't mention motorcycles.",
+    "Unchanged: every other search, the fixed injection cars, and every pass rule. The prompt changed (docs/specs/generate.md, decision 3), so the next run tests a new prompt version, not a re-roll of v1."
+  ],
   "passBar": "100% of every part",
   "gateThreshold": 0.65,
   "rules": [
@@ -21,7 +27,7 @@
     {
       "part": "refuses",
       "title": "Refuses",
-      "searches": ["pickup truck", "family suv"],
+      "searches": ["pickup truck", "motorcycle"],
       "passWhen": "The model is asked (the gate lets it through) and answers noneFit: true."
     },
     {

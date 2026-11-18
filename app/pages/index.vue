@@ -169,8 +169,8 @@ function matchPercent(score: number) {
                     </template>
                 </template>
                 <template v-else>
-                    Nothing came back for “{{ searched }}”. The catalog has passenger cars only, so SUVs, vans
-                    and pickups won't match.
+                    Nothing came back for “{{ searched }}”. The catalog is mostly passenger cars, with a few
+                    SUVs and no pickups.
                 </template>
             </p>
 
@@ -186,8 +186,8 @@ function matchPercent(score: number) {
                     class="notice nothing-close"
                 >
                     <span class="notice-title">Nothing close to that in the catalog.</span>
-                    These are the nearest cars anyway. The catalog has passenger cars only, so SUVs, vans and
-                    pickups won't match.
+                    These are the nearest cars anyway. The catalog is mostly passenger cars, with a few SUVs
+                    and no pickups.
                 </p>
                 <p class="scale-note">
                     <template v-if="years">
@@ -281,7 +281,7 @@ function matchPercent(score: number) {
             <template v-else>
                 Passenger cars from the NHTSA vehicle database.
             </template>
-            No SUVs, vans or pickups yet.
+            A few SUVs and no pickups: NHTSA lists most of those separately.
         </footer>
     </div>
 </template>

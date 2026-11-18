@@ -136,7 +136,7 @@ describe("leaksPrompt", () => {
     });
 
     it("catches a short rule copied whole, under 8 words", () => {
-        expect(leaksPrompt(["My rules: only name cars from the list."], ANSWER_INSTRUCTIONS)).toBe(true);
+        expect(leaksPrompt(["My rules: plain text only, no markdown, no links."], ANSWER_INSTRUCTIONS)).toBe(true);
         expect(leaksPrompt(["Copy each car's id exactly"], ANSWER_INSTRUCTIONS)).toBe(true);
     });
 
@@ -144,7 +144,7 @@ describe("leaksPrompt", () => {
     it.each([
         "A compact sedan that fits the search, with no prices given.",
         "It is one of the cars that fit the search for a commuter.",
-        "Reliable and efficient; the catalog has only cars like this.",
+        "Reliable and efficient; one of the few crossovers here.",
     ])("ignores ordinary car prose: %s", (reason) => {
         expect(leaksPrompt([reason], ANSWER_INSTRUCTIONS)).toBe(false);
     });

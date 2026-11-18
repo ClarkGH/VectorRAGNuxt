@@ -47,7 +47,7 @@ flowchart LR
 | **Each car has** | Manufacturer, model name, the years it was sold, and a short **AI-written** description. 425 have a real one; for the other 50 the model didn't know the car and wrote "Lesser-known model from MAKE." instead of guessing |
 
 **What's missing, and why it matters:**
-- **No SUVs, vans or pickups.** The government database files them separately. Searching for "family SUV" won't find a Honda CR-V, because it isn't in the data. *Vans in particular have pulled quite the van-ishing act.*
+- **Almost no SUVs or vans, and no pickups.** The government database files most of them separately, so searching for "family SUV" won't find a Honda CR-V. A few slip in as passenger cars: 27 of the 475 models are described as crossovers, SUVs or vans (the Tesla Model X, Volvo XC90 and Nissan Kicks among them). There are no pickups at all. *Vans in particular have pulled quite the van-ishing act.*
 - **No verified facts, prices or specs.** The descriptions come from an AI's general knowledge, not a spec sheet, so they can be wrong. The page says so. Cars the AI doesn't recognize are described as "Lesser-known model from MAKE" rather than guessed at. *We asked it not to make things up, and unlike a used-car salesman, it mostly listens.*
 - **No curation.** Limo builders and kit-car makers are included alongside Toyota and BMW, and they can show up in results.
 
@@ -59,7 +59,8 @@ flowchart LR
 | "2018 accord" | **Good** | Matches by name, filtered to models sold 2016–2020 |
 | "small honda", "cheap reliable car" | **Fair to good** | The descriptions now carry words like "compact" and "affordable" for well-known models |
 | "something like a Kandi K27" | **Poor** | Obscure models only get "Lesser-known model", so there's little to match |
-| "family SUV", "pickup truck" | **None** | Those vehicles aren't in the data |
+| "family SUV" | **Poor** | Only the few crossovers and SUVs that NHTSA lists as passenger cars |
+| "pickup truck" | **None** | Pickups aren't in the data |
 
 These are expectations, not measurements yet; the table gets real scores once we've run each request. How we'll measure them, and decide whether a change is a win, is in [Measuring search quality](evaluation.md).
 

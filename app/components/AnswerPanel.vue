@@ -8,8 +8,9 @@
 const props = defineProps<{ query: string; results: SearchResult[] }>();
 const emit = defineEmits<{ answered: [answer: Answer] }>();
 
-// Decision 4: a refusal is fixed page text, never model text.
-const REFUSAL_TEXT = "None of these match your search. The catalog only has cars.";
+// Decision 4: a refusal is fixed page text, never model text. Not "only cars":
+// 27 of 475 models are crossovers, SUVs or vans (docs/evaluation.md).
+const REFUSAL_TEXT = "None of these match your search. The catalog is mostly passenger cars, with a few SUVs and no pickups.";
 
 // What each 429 reason says (S14). Search keeps working in every case.
 const LIMIT_TEXT: Record<AnswerLimitReason, string> = {

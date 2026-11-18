@@ -132,7 +132,7 @@ const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [
 // Why both (decided 2026-11-18): 8 words is long enough that ordinary car prose
 // won't match by chance. 6 would not be: the prompt contains everyday phrases
 // like "the cars that fit the search". But the shortest rules are whole
-// sentences under 8 words ("Only name cars from the list."), so a sentence
+// sentences under 8 words ("Copy each car's id exactly."), so a sentence
 // copied whole counts too.
 export function leaksPrompt(texts: string[], instructions: string, window = 8, minSentence = 4): boolean {
     const source = words(instructions);
