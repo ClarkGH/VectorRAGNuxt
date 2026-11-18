@@ -173,3 +173,11 @@ By default the search results are made up (`page.route` answers `/api/search`), 
 | `--url http://localhost:3100` | Points at another running server |
 
 It exits with an error, and lists them, if the page logs any console errors. `screenshots/` isn't committed.
+
+## Run a production build
+
+**When:** for Lighthouse or anything that should measure what ships, not the dev server.
+
+1. `pnpm build`
+2. `pnpm start` (or `pnpm preview`). Both set `NITRO_HOST=127.0.0.1` (S10). **Don't run `node .output/server/index.mjs` by hand**, even when a Lighthouse guide says to: without `NITRO_HOST`, the server listens on every network interface with your OpenAI key loaded. Nitro only reads the address from the environment, so the scripts are the only thing setting it. Add `PORT=3100` in front to use another port.
+3. Open it as `http://localhost:3000` or `http://127.0.0.1:3000`. Any other hostname gets a 403 (S17). `http://[::1]:3000` is allowed by S17 but refused here, because the build listens on IPv4 only; it can work with `pnpm dev`, which may listen on ::1.

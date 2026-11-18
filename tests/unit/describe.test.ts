@@ -18,6 +18,24 @@ describe("cleanDescription", () => {
         expect(cleanDescription({ description: "  A compact\n\tsedan.\u0007 " })).toBe("A compact sedan.");
     });
 
+    it("removes invisible and text-direction characters (S15)", () => {
+        // Escaped, not typed raw: an editor could strip raw invisible characters
+        // and leave the test passing without testing anything.
+        // Word joiner, right-to-left override + pop, BOM, soft hyphen.
+        const raw = "A com\u2060pact \u202Enades\u202C sedan.\uFEFF\u00AD";
+        expect(cleanDescription({ description: raw })).toBe("A compact nades sedan.");
+    });
+
+    it("turns zero-width spaces into spaces, so words don't run together (S15)", () => {
+        expect(cleanDescription({ description: "A\u200Bcompact\u200B sedan." })).toBe("A compact sedan.");
+    });
+
+    it("removes invisible characters outside Cf (S15)", () => {
+        // Variation selector, Hangul fillers, combining grapheme joiner, blank Braille.
+        const raw = "A Cor\uFE0Folla\u3164\u115F\u1160 com\u034Fpact\u2800 sedan.";
+        expect(cleanDescription({ description: raw })).toBe("A Corolla compact sedan.");
+    });
+
     it.each([
         ["not an object", "A sedan."],
         ["null", null],

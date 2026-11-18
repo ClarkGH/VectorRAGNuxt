@@ -38,9 +38,10 @@ function tryExample(text: string) {
     search();
 }
 
-// Mongo's score runs 0..1, but 0.5 already means "unrelated", so the bar spans 0.5..1.
-function closeness(score: number) {
-    return Math.min(Math.max((score - 0.5) / 0.5, 0), 1);
+// Mongo's score runs 0..1, but 0.5 already means "unrelated", so the page shows
+// 0.5..1 as 0..100%. One helper feeds both the number and the bar, so they can't drift apart.
+function matchPercent(score: number) {
+    return Math.round(Math.min(Math.max((score - 0.5) / 0.5, 0), 1) * 100);
 }
 </script>
 
@@ -174,7 +175,7 @@ function closeness(score: number) {
                                     </p>
                                 </div>
                                 <p class="score">
-                                    <span class="score-number">{{ Math.round(car.score * 100) }}%</span>
+                                    <span class="score-number">{{ matchPercent(car.score) }}%</span>
                                     <span class="score-label">match</span>
                                 </p>
                             </div>
@@ -193,7 +194,7 @@ function closeness(score: number) {
                             >
                                 <div
                                     class="bar-fill"
-                                    :style="{ width: `${closeness(car.score) * 100}%` }"
+                                    :style="{ width: `${matchPercent(car.score)}%` }"
                                 />
                             </div>
                         </div>

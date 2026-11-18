@@ -6,6 +6,7 @@
 //   P5 plain text only, P6 capped output.
 import type OpenAI from "openai";
 import type { CarModel } from "../../shared/types/car.ts";
+import { cleanText } from "../../shared/utils/clean-text.ts";
 import { formatYears } from "../../shared/utils/years.ts";
 
 export const DESCRIBE_MODEL = "gpt-5-mini";
@@ -55,9 +56,8 @@ export function cleanDescription(raw: unknown): string | null {
     if (typeof raw !== "object" || raw === null) return null;
     const { description } = raw as Record<string, unknown>;
     if (typeof description !== "string") return null;
-    // Collapse whitespace and drop control characters.
-    // eslint-disable-next-line no-control-regex
-    const text = description.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+    // Collapse whitespace, drop control and invisible characters (S15).
+    const text = cleanText(description);
     if (!text || text.length > DESCRIPTION_MAX_LENGTH) return null;
     // Plain prose only: no markup or links.
     if (/[<>]|https?:|www\./i.test(text)) return null;

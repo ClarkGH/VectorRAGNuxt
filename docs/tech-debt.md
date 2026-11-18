@@ -2,7 +2,7 @@
 
 What's owed, scored, with a plan to pay it down alongside feature work. Reviewed 2026-11-11, decisions updated the same day; brought up to date 2026-11-17.
 
-The code itself is in good shape: logic lives in testable modules, the security spec (S1–S10, P1–P7) is enforced by tests and lint, and the scripts are resumable. The debt was mostly around the code, and the actionable part is paid off. Only before-public hardening is left, and it's parked.
+The code itself is in good shape: logic lives in testable modules, the security spec (S1–S10, S17, P1–P7) is enforced by tests and lint, and the scripts are resumable. The debt was mostly around the code, and the actionable part is paid off. Only before-public hardening is left, and it's parked.
 
 This is a learning project, run locally and set aside once the analysis is done. There's no public deployment planned, and the plan below is sized for that.
 
@@ -24,6 +24,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 | # | Item | Type | I | R | E | Score |
 | --- | --- | --- | --- | --- | --- | --- |
+| 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 10 | Niche makers crowd out real answers: remove them from the dataset | Data | 4 | 3 | 2 | done (83 makers) |
 | 4 | No Dependabot | Dependency | | | | done |
@@ -33,6 +34,50 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 6 | Two TypeScript aliases | Dependency | | | | done |
 | 8 | Year-range formatting written three times | Code | | | | done |
 | 2 | AI descriptions aren't backed up | Data | | | | won't do |
+
+### 11. Stack review before the G slice (2026-11-17)
+
+**Done 2026-11-17; Clark reviewed and kept all of it the same day.** Why each fix was needed: [G spec](specs/generate.md#why-the-stack-review-changed-this-spec-2026-11-17). A code review of the whole stack (server, scripts, page) and the freshly settled [G spec](specs/generate.md), before building G. The code had no bugs in the request path; four hardening fixes went into the code, and seven gaps were fixed in the G spec while it's still cheap to change. `pnpm check` passes (lint, typecheck, 96 unit tests, 18 of them new).
+
+**Code**
+
+| # | What | Why | How |
+|---|---|---|---|
+| 1 | Production builds listen on localhost only (S10 extended) | Nitro's production server listens on **every** network interface unless `NITRO_HOST`/`HOST` is set (checked in its source). S10 only covered `pnpm dev`, so a production build, as used for Lighthouse, put a server holding the OpenAI key on the local network | `package.json`: `pnpm preview` sets `NITRO_HOST=127.0.0.1`; new `pnpm start` runs the build on 127.0.0.1 with `.env` loaded. Runbook: [Run a production build](runbook.md#run-a-production-build). Verified: the built server listened on `127.0.0.1:3999` only |
+| 2 | New rule S17: refuse requests not addressed to localhost | DNS rebinding: a website points its own domain at 127.0.0.1, and the browser then treats the API as same-origin, so S1's JSON-only rule stops nothing. Today that spends embedding calls; once G lands, the 50 daily chat calls | `server/utils/host.ts` (`isLocalHost`, testable) and `server/middleware/local-only.ts` (403 for any other `Host`). Allows `localhost`, `127.0.0.1`, `[::1]` on any port. 17 unit tests in `tests/unit/host.test.ts`. Verified on the built server: `Host: localhost` → through, `Host: evil.example` → 403 |
+| 3 | One text cleaner for S15, used by descriptions now | Descriptions stripped control characters but not invisible ones (zero-width, text-direction overrides). They're shown on the page and, with G, go into the prompt | `shared/utils/clean-text.ts` (`cleanText`: Cc → space, Cf removed; widened after the code review below); `cleanDescription` uses it; new test. None of the 673 stored descriptions contained such characters, so nothing needs re-describing or re-embedding |
+| 4 | "% match" shows the rescaled score | It showed Mongo's raw score, where 0.5 already means unrelated, so "asdf qwerty" read as a 60% match. The bar was already rescaled; the number wasn't | `app/pages/index.vue` shows `(score − 0.5) / 0.5`, the same as the bar: "asdf qwerty" now 20%. Explained in [rag.md §5](rag.md#5-what-mongos-score-means). Thresholds stay on Mongo's scale |
+
+**G spec** ([generate.md](specs/generate.md); P3 and S10/S17 in [ingest-search.md](specs/ingest-search.md))
+
+| # | What | Why | How |
+|---|---|---|---|
+| 5 | The gate uses Mongo's score scale | The 0.65 threshold was measured on `(1 + cos) / 2`. Computed as raw cosine in code, "accord" is about 0.41, so every search would be blocked | Decision 1 says to convert, and takes the highest score across the ids |
+| 6 | The gate embeds the same text as search | Search embeds "accord" for "2018 accord"; embedding the raw query gives a different score near 0.65 | Decision 1: embed `parseYearFilter(query).text`; new success check |
+| 7 | `picks` is 0–5 | "1–5" plus "refusals have no picks" made every refusal invalid | Decision 4: none when `noneFit`, 1–5 otherwise |
+| 8 | An unknown id drops the whole answer | The spec said both "drop the answer" and "drop the id". Filtering first can leave an empty answer and makes the Grounded check unable to fail | Decision 4, P3, security table, answer check |
+| 9 | The text check ignores everyday words | Fit, Focus, Roadster, Spark, Legacy, Insight… are model names, so "a good fit for commuters" would drop a valid answer | Decision 4: make + model, or the model alone unless it's on a reviewed everyday-word list |
+| 10 | The cache comes first; key and retries fixed | Cached repeats still spent an embedding; gated requests weren't rate-limited; sorted ids didn't match the ranked prompt; a hand-bumped prompt version is easy to forget and missed new descriptions; the shared client's 2 retries could spend 3 chat calls on one click | S11: ids in order sent, a computed prompt version (hash of prompt + schema + model), descriptions in the key. Decision 5: lookup before embedding. S14: every uncached request counts; chat call has `maxRetries: 0`. Appendix lists the order of work per request |
+| 11 | P3 matches the decisions | P3 is the rule the G spec applies "as written", and it lacked the text check and the drop-the-answer rule | P3 amended |
+
+**Code review of the fixes (2026-11-17)**
+
+A `/code-review` of the changes above found 8 issues, all fixed the same day (`pnpm check`: 98 unit tests). For a local-only proof of concept, most of this is over-engineering: the realistic attacker is another website, and the worst case is lost quota. The fixes stay because a production app would need the same ones, and they're cheap now.
+
+| Fix | Needed here? | In production |
+|---|---|---|
+| S17 lets requests with no `Host` through. Nitro's own prerender and server-side `$fetch` calls have none; browsers always send one, and Node answers 400 to outside requests without it | Yes: S17 would otherwise break `pnpm generate` and G | Same rule, with the real domain in the allowlist and usually a reverse proxy enforcing it too. It also blocks Host-header injection (poisoned caches, reset links pointing at an attacker's domain). A security check that breaks your own app tends to get switched off, which is worse than not having one |
+| `cleanText` turns zero-width spaces into spaces and also removes Unicode's default-ignorable characters (variation selectors, Hangul fillers) | No: the only person typing prompts is the developer | Yes. With real users, prompt injection can make the model write text that looks like one thing and is another: `Cor\uFE0Folla` displays as "Corolla" but fails a string match. Every check on model output should run on cleaned text |
+| The S15 test writes invisible characters as `\u` escapes | Yes | Yes: an editor could strip raw characters and the test would pass while testing nothing. A security test has to fail when the protection is gone |
+| Runbook: running `.output/server/index.mjs` by hand skips the localhost bind; `[::1]` only reaches `pnpm dev` | Barely: S17 still blocks rebinding requests | Exposure is set by the infrastructure (proxy, container, firewall), not an npm script |
+| The % and the bar share `matchPercent()`; new-test count corrected to 18 | Housekeeping | Housekeeping |
+
+**Test today (all free):**
+1. `pnpm check`: lint, typecheck, unit tests.
+2. `pnpm dev`, search "asdf qwerty": the top result shows about 20% match, "honda civic" about 90%+.
+3. `pnpm build && pnpm start`, then `ss -ltnp | grep 3000`: listening on `127.0.0.1` only.
+4. With it running: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/api/health -H 'Host: evil.example'` → 403; the same with `-H 'Host: localhost:3000'` → 200 (503 if Mongo isn't running; anything but 403 means it got through).
+5. Read the decision 1, 4 and 5 changes in the G spec: they add detail but don't reverse any decision.
 
 ### 10. Remove niche makers from the dataset
 
@@ -57,6 +102,9 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 `pnpm audit` on 2026-11-17: **5 findings (1 low, 2 moderate, 2 high)**, up from 4 on 2026-11-11. The deepmerge one is gone; new is **picomatch** (high, ReDoS from crafted glob patterns), with no patched version yet. All are in build, lint and font tooling (esbuild, glob, minimatch, picomatch), none in the request path, and none take patterns from visitors. Dependabot picks up the fixes once they're released.
 
 ## Clark's TODOs
+
+- [x] **Review the stack review fixes** ([#11](#11-stack-review-before-the-g-slice-2026-11-17)): 4 code fixes, 7 G spec fixes, and test steps. Mark done if satisfactory.
+  - Claude (2026-11-17): **done.** Clark reviewed and kept all 11. Why each one was needed, ranked by what breaks without it: [G spec](specs/generate.md#why-the-stack-review-changed-this-spec-2026-11-17). Next is the [build plan](specs/generate.md#build-plan-from-2026-11-18).
 
 - [x] **Decide the G spec's open questions** ([docs/specs/generate.md](specs/generate.md#decisions-clarks-calls)): gate, on-demand vs automatic, prompt fields, answer shape, cache, model, answer check. The first is how to say "we don't carry that", now that the floor gap is about 0.06 ([results](evaluation.md#results-on-reviewed-labels-2026-11-16)).
   - Claude (2026-11-17): **done.** All seven settled in review. Gate: a 0.65 score threshold for junk plus a prompt that allows "none fit" (per-search scores overlap, so only the model catches near misses); answers on a button, with a free "nothing close" flag on search; picks with a reason each; cached; gpt-5-mini; an 11-call answer check with a 100% pass bar.

