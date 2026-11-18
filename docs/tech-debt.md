@@ -26,6 +26,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | --- | --- | --- | --- | --- | --- | --- |
 | 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
+| 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
 | 10 | Niche makers crowd out real answers: remove them from the dataset | Data | 4 | 3 | 2 | done (83 makers) |
 | 4 | No Dependabot | Dependency | | | | done |
 | 3 | No relevance check with real embeddings | Test | 4 | 3 | 2 | done |
@@ -125,6 +126,7 @@ Decided 2026-11-11: Node 26; the relevance check runs by hand; no public demo; t
 | # | Item | Revisit when |
 | --- | --- | --- |
 | 5 | Rate limiting, `nuxt-security` (CSP and headers), OpenAI budget alerts, error text written for visitors instead of developers; since 2026-11-16 also deploying only a production build and per-visitor limits on AI answers. The README warns about it, and each fix is written up in the spec's [Before going public](specs/ingest-search.md#before-going-public) | If a public demo is ever planned. Today it isn't: the project runs locally and is shown through the repo and screenshots |
+| 12 | **Stretch: move the answer cache to Redis.** Mongo is the right cache today ([answer-cache.ts](../server/utils/answer-cache.ts)): a model answer takes seconds and one of 50 daily calls, against a millisecond or two for a lookup by `_id`; entries survive restarts, so an answer is never paid for twice; every app instance would share it; and Mongo is already running, while Redis is one more service to deploy, secure and watch. Redis wins on sub-millisecond reads and on capping the cache by memory with least-used eviction, where Mongo only expires entries by age, so the collection grows with distinct searches (about 1 KB per answer). Related gap either way: two identical uncached requests at the same moment both call the model (a cache stampede); a pending marker or per-key lock would fix it | Cache reads become a large share of traffic and need sub-millisecond replies, or the collection grows past what's comfortable to keep on disk. Neither happens with one local user |
 
 ## Done
 
