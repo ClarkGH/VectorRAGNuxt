@@ -1,6 +1,6 @@
 # Spec: AI-written answers (the "G" in RAG)
 
-**Status:** draft 2026-11-16; decisions settled and stack review applied 2026-11-17. Nothing built yet; [build plan](#build-plan-from-2026-11-18) starts 2026-11-18 · **Background:** [How VectorRAGNuxt works](../rag.md#9-where-the-g-fits-later) · **Builds on:** ["Find the closest car" search](ingest-search.md)
+**Status:** draft 2026-11-16; decisions settled and stack review applied 2026-11-17. Being built: [build plan](#build-plan-from-2026-11-18) step 1 (answer core) done 2026-11-18 · **Background:** [How VectorRAGNuxt works](../rag.md#9-where-the-g-fits-later) · **Builds on:** ["Find the closest car" search](ingest-search.md)
 
 ## Summary
 

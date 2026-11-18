@@ -160,7 +160,7 @@ The grade is about the car and the words typed, never about where search put it.
 
 **When:** after changing the page, to see it without clicking around.
 
-1. Download headless Chromium once per computer: `pnpm browser:install` (about 100 MB, into `~/.cache/ms-playwright`).
+1. Download headless Chromium: `pnpm browser:install` (about 100 MB, into `~/.cache/ms-playwright`). Once per computer, and again after each Playwright update, since each version needs its own browser build. If `pnpm screenshot` says "Executable doesn't exist", this is the fix.
 2. Start the app: `pnpm dev`
 3. `pnpm screenshot`. This writes `screenshots/search-desktop.png`, `search-dark.png` and `search-phone.png`.
 

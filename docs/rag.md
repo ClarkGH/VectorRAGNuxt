@@ -44,7 +44,7 @@ flowchart LR
 | **Source** | The US government's free vehicle database ([NHTSA vPIC](https://vpic.nhtsa.dot.gov/api/)) |
 | **Covers** | Passenger cars, model years 2016–2026 |
 | **Size** | 475 car models from 66 manufacturers (2,617 model-year combinations). vPIC lists 673 models from 149; 83 niche makers (limo, kit-car and replica builders) are left out, see [tech-debt #10](tech-debt.md#10-remove-niche-makers-from-the-dataset) |
-| **Each car has** | Manufacturer, model name, the years it was sold, and a short **AI-written** description |
+| **Each car has** | Manufacturer, model name, the years it was sold, and a short **AI-written** description. 425 have a real one; for the other 50 the model didn't know the car and wrote "Lesser-known model from MAKE." instead of guessing |
 
 **What's missing, and why it matters:**
 - **No SUVs, vans or pickups.** The government database files them separately. Searching for "family SUV" won't find a Honda CR-V, because it isn't in the data. *Vans in particular have pulled quite the van-ishing act.*
