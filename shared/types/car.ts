@@ -34,3 +34,9 @@ export type SearchResponse = { results: SearchResult[]; years: YearRange | null 
 
 // What's loaded, for the page's "model years …" text. `years` is null when empty.
 export type CatalogSummary = { models: number; years: YearRange | null };
+
+// An AI-written answer about a search's results (docs/specs/generate.md,
+// decision 4). `noneFit: true` has no picks, and the page shows fixed refusal
+// text instead of anything the model wrote. Not verified fact.
+export type AnswerPick = { carId: string; reason: string };
+export type Answer = { noneFit: boolean; picks: AnswerPick[] };
