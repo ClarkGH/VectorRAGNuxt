@@ -48,3 +48,19 @@ body {
   background: var(--page);
   color: var(--ink);
 }
+
+/* The one action style: the search button and "Explain these results".
+   Unlayered, so it wins over Nuxt UI's utility classes. */
+.action-button {
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.5rem;
+}
+.action-button:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--blue-hover);
+}
+.action-button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}

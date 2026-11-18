@@ -9,6 +9,12 @@ const nothingClose = ref(false);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+// The AI answer's picks, carId -> reason, shown inside the matching result cards.
+// `searchCount` keys the answer panel, so every search (even a repeat of the
+// same words) starts it fresh, and the picks are cleared with it.
+const picks = ref(new Map<string, string>());
+const searchCount = ref(0);
+
 const hasDescriptions = computed(() => results.value?.some((car) => car.description) ?? false);
 
 // What's loaded, read from Mongo on the server render. If Mongo is down this is
@@ -26,6 +32,8 @@ async function search() {
         years.value = res.years;
         nothingClose.value = res.nothingClose;
         searched.value = q;
+        picks.value = new Map();
+        searchCount.value++;
     } catch {
         results.value = null;
         error.value
@@ -83,7 +91,7 @@ function matchPercent(score: number) {
                         type="submit"
                         size="xl"
                         :loading="loading"
-                        class="search-button"
+                        class="action-button search-button"
                     >
                         Search
                     </UButton>
@@ -161,14 +169,25 @@ function matchPercent(score: number) {
                     </template>
                 </p>
 
+                <!-- Not offered when nothing is close: the server's gate would refuse anyway. -->
+                <AnswerPanel
+                    v-if="!nothingClose"
+                    :key="searchCount"
+                    :query="searched"
+                    :results="results"
+                    @answered="(answer) => (picks = new Map(answer.picks.map((p) => [p.carId, p.reason])))"
+                />
+
                 <ol
-                    :key="searched"
+                    :key="searchCount"
                     class="result-list"
                 >
                     <li
                         v-for="(car, i) in results"
+                        :id="`car-${car._id}`"
                         :key="car._id"
                         class="result"
+                        :class="{ picked: picks.has(car._id) }"
                     >
                         <span
                             class="rank"
@@ -197,6 +216,14 @@ function matchPercent(score: number) {
                                 class="description"
                             >
                                 {{ car.description }}
+                            </p>
+                            <!-- The AI answer, marked on the car it's about. Plain text (P5). -->
+                            <p
+                                v-if="picks.has(car._id)"
+                                class="pick-note"
+                            >
+                                <span class="pick-label">AI pick</span>
+                                {{ picks.get(car._id) }}
                             </p>
                             <div
                                 class="bar"
@@ -286,20 +313,10 @@ h1 {
 .search :deep(.search-input:focus-visible) {
   box-shadow: inset 0 0 0 2px var(--blue);
 }
+/* Colors, hover and focus come from .action-button (main.css). */
 .search-button {
-  background: var(--blue);
-  color: #ffffff;
-  font-weight: 700;
-  border-radius: 0.5rem;
   padding-inline: 1.5rem;
   justify-content: center;
-}
-.search-button:hover {
-  background: var(--blue-hover);
-}
-.search-button:focus-visible {
-  outline: 3px solid var(--blue);
-  outline-offset: 2px;
 }
 
 .examples {
@@ -377,6 +394,12 @@ h2 {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 0.75rem;
+  /* The answer panel's links jump here; leave room above the card. */
+  scroll-margin-top: 1rem;
+}
+/* A car the AI answer picked: the same blue as the match bars, on the edge. */
+.result.picked {
+  box-shadow: inset 4px 0 0 var(--bar);
 }
 .rank {
   display: grid;
@@ -432,6 +455,23 @@ h2 {
   margin-top: 0.625rem;
   line-height: 1.5;
   max-width: 60ch;
+}
+/* AI-written, so it sits on the rank chips' tint, apart from the description. */
+.pick-note {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  max-width: 60ch;
+  border-radius: 0.5rem;
+  background: var(--rank-bg);
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.pick-label {
+  display: block;
+  color: var(--rank-ink);
+  font-weight: 700;
+  font-size: 0.875rem;
 }
 .bar {
   margin-top: 0.875rem;
