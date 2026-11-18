@@ -138,6 +138,10 @@ All seven settled 2026-11-17.
    - **Any `carId` not in the retrieved set drops the whole answer** (P3), rather than filtering out the bad id. Filtering first could leave `noneFit: false` with no picks, and it would hide the failure from the Grounded check, which then could never fail.
    - Validation rejects the two contradictions a strict JSON schema can't rule out: `noneFit: true` with picks, and `noneFit: false` with none.
    - **Text check:** a reason may name only retrieved cars. It's matched against the catalog on word boundaries, ignoring case: the full make + model ("Ford Mustang"), and the model name alone ("the Mustang"), **except model names that are everyday words** (Fit, Focus, Roadster, Coupe, Classic, Spark, Legacy, Insight, Clarity, Ghost, Dawn, Crown, GT, IS, ES, LS and similar), which only count with their make. That list is reviewed and kept in code next to the check. Naming another *retrieved* car is fine.
+     Refined with Clark 2026-11-18, from cases in the data that would drop good answers:
+     - **Model names with no letters need their make** (Chrysler 300, Toyota 86, Porsche 911…), so "300 miles of range" isn't the Chrysler 300.
+     - **A model name alone passes if any retrieved car has it.** Continental, GT, Malibu and S7 each belong to two or more makes; "the Continental" is fine when the Lincoln was retrieved, but "Bentley Continental" in full still fails.
+     - **Genesis is on the everyday list**, since it's both a Hyundai model and a make.
    - Each reason is capped at 200 characters, after S15 cleanup.
    - **A refusal is fixed page text**, not model text: "None of these match your search. The catalog only has cars." Keeps it simple, covers the "Known gap" story, and a refusal can't carry injected text or make claims. It can't explain *why* nothing fit; fine for a proof of concept.
    - P3 in the [search spec](ingest-search.md) is amended to this shape.
