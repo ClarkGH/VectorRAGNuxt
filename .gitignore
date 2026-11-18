@@ -31,3 +31,6 @@ screenshots
 
 # Local-only CI workflow: this project doesn't run CI on GitHub
 .github/workflows/ci.yml
+
+# Local plans and notes (step briefs), never committed
+.claude/
