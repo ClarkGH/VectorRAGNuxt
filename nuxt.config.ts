@@ -25,6 +25,9 @@ export default defineNuxtConfig({
     runtimeConfig: {
         mongodbUri: "",
         openaiKey: "",
+        // /api/answer uses the fake answerer and skips the cache unless
+        // NUXT_ANSWER_MOCK=false: real answers spend the 50-a-day chat limit.
+        answerMock: true,
 
         public: {},
     },

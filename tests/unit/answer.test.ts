@@ -10,6 +10,7 @@ import {
     computePromptVersion,
     fakeAnswer,
     findMentions,
+    GATE_THRESHOLD,
     gateScore,
     PROMPT_VERSION,
     REASON_MAX_LENGTH,
@@ -252,13 +253,19 @@ describe("answerCacheKey (S11)", () => {
 });
 
 describe("PROMPT_VERSION (S11)", () => {
-    it("is computed from the instructions, the schema and the model", () => {
-        expect(PROMPT_VERSION).toBe(computePromptVersion(ANSWER_INSTRUCTIONS, answerSchema, ANSWER_MODEL));
-        expect(computePromptVersion(`${ANSWER_INSTRUCTIONS}.`, answerSchema, ANSWER_MODEL)).not.toBe(PROMPT_VERSION);
-        expect(computePromptVersion(ANSWER_INSTRUCTIONS, { ...answerSchema, x: 1 }, ANSWER_MODEL)).not.toBe(
-            PROMPT_VERSION,
-        );
-        expect(computePromptVersion(ANSWER_INSTRUCTIONS, answerSchema, "gpt-5")).not.toBe(PROMPT_VERSION);
+    const parts = { instructions: ANSWER_INSTRUCTIONS, schema: answerSchema, model: ANSWER_MODEL, gate: GATE_THRESHOLD };
+
+    it("is computed from the instructions, the schema, the model and the gate", () => {
+        expect(PROMPT_VERSION).toBe(computePromptVersion(parts));
+    });
+
+    it.each([
+        ["the instructions", { instructions: `${ANSWER_INSTRUCTIONS}.` }],
+        ["the schema", { schema: { ...answerSchema, x: 1 } }],
+        ["the model", { model: "gpt-5" }],
+        ["the gate threshold", { gate: 0.7 }],
+    ])("changes with %s", (_, change) => {
+        expect(computePromptVersion({ ...parts, ...change })).not.toBe(PROMPT_VERSION);
     });
 });
 

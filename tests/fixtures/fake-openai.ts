@@ -23,11 +23,28 @@ export function fakeVector(text: string): number[] {
 type DescribeInput = { id: string; make: string; model: string; modelYears: string };
 type DescribeEntry = { id: string; description: string };
 
+// What the answer prompt sends (server/utils/answer.ts, buildAnswerInput).
+export type AnswerInput = { search: string; modelYears: string | null; cars: { id: string }[] };
+// How the fake replies to an answer request: reply text (optionally cut short,
+// as when the model runs out of tokens), or an HTTP error such as a 429.
+// `code` is OpenAI's error code, such as "insufficient_quota".
+export type AnswerReplyPlan
+    = | { text: string; incomplete?: boolean }
+        | { error: number; message: string; code?: string };
+
+// Default: pick the top car, a valid answer.
+const pickTopCar = (input: AnswerInput): AnswerReplyPlan => ({
+    text: JSON.stringify({ noneFit: false, picks: [{ carId: input.cars[0]?.id, reason: "Fits the search." }] }),
+});
+
 export type FakeOpenAI = {
     baseURL: string;
+    // Every request: embeddings and responses.
     calls: () => number;
     // Bodies sent to /v1/responses, for checking what the model would see.
     responseRequests: Record<string, unknown>[];
+    // Changes how later answer requests are replied to.
+    setAnswer: (plan: (input: AnswerInput) => AnswerReplyPlan) => void;
     close: () => Promise<void>;
 };
 
@@ -39,10 +56,28 @@ export async function startFakeOpenAI({
     extra = [] as DescribeEntry[],
 } = {}): Promise<FakeOpenAI> {
     let calls = 0;
+    let answer = pickTopCar;
     const responseRequests: Record<string, unknown>[] = [];
-    const json = (res: import("node:http").ServerResponse, body: unknown) => {
-        res.writeHead(200, { "content-type": "application/json" });
+    const json = (res: import("node:http").ServerResponse, body: unknown, status = 200) => {
+        res.writeHead(status, { "content-type": "application/json" });
         res.end(JSON.stringify(body));
+    };
+    const reply = (res: import("node:http").ServerResponse, model: unknown, text: string, status = "completed") => {
+        json(res, {
+            id: `resp_${calls}`,
+            object: "response",
+            status,
+            model,
+            output: [
+                {
+                    type: "message",
+                    id: `msg_${calls}`,
+                    role: "assistant",
+                    status,
+                    content: [{ type: "output_text", text, annotations: [] }],
+                },
+            ],
+        });
     };
 
     const server = createServer((req, res) => {
@@ -69,28 +104,28 @@ export async function startFakeOpenAI({
                 calls++;
                 const request = JSON.parse(body) as Record<string, unknown>;
                 responseRequests.push(request);
+                const format = (request.text as { format?: { name?: string } } | undefined)?.format?.name;
+
+                // An answer request (its schema is named "car_answer").
+                if (format === "car_answer") {
+                    const plan = answer(JSON.parse(String(request.input)) as AnswerInput);
+                    if ("error" in plan) {
+                        const error = { message: plan.message, type: "requests", code: plan.code ?? null };
+                        json(res, { error }, plan.error);
+                    } else {
+                        reply(res, request.model, plan.text, plan.incomplete ? "incomplete" : "completed");
+                    }
+                    return;
+                }
+
+                // A describe request.
                 const { cars } = JSON.parse(String(request.input)) as { cars: DescribeInput[] };
                 const entries: DescribeEntry[] = [];
                 for (const car of cars) {
                     const description = describe(car);
                     if (description !== null) entries.push({ id: car.id, description });
                 }
-                const text = JSON.stringify({ cars: [...entries, ...extra] });
-                json(res, {
-                    id: `resp_${calls}`,
-                    object: "response",
-                    status: "completed",
-                    model: request.model,
-                    output: [
-                        {
-                            type: "message",
-                            id: `msg_${calls}`,
-                            role: "assistant",
-                            status: "completed",
-                            content: [{ type: "output_text", text, annotations: [] }],
-                        },
-                    ],
-                });
+                reply(res, request.model, JSON.stringify({ cars: [...entries, ...extra] }));
                 return;
             }
             res.writeHead(404).end();
@@ -102,6 +137,9 @@ export async function startFakeOpenAI({
         baseURL: `http://127.0.0.1:${port}/v1`,
         calls: () => calls,
         responseRequests,
+        setAnswer: (plan) => {
+            answer = plan;
+        },
         close: () => new Promise((resolve) => server.close(() => resolve())),
     };
 }

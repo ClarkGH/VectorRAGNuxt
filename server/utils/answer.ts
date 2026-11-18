@@ -52,13 +52,24 @@ export const answerSchema = {
     additionalProperties: false,
 } as const;
 
-// S11: computed, never hand-bumped. Anything that changes what the model is
-// asked or how it answers changes the version, which retires cached answers.
-export function computePromptVersion(instructions: string, schema: unknown, model: string) {
-    return sha256(JSON.stringify([instructions, schema, model])).slice(0, 16);
+// S11: computed, never hand-bumped. Anything that decides which answer a search
+// gets changes the version, which retires cached answers: what the model is
+// asked, how it must reply, which model replies, and the gate threshold (a
+// raised gate would otherwise keep serving answers it now blocks).
+export type PromptParts = { instructions: string; schema: unknown; model: string; gate: number };
+
+export function computePromptVersion({ instructions, schema, model, gate }: PromptParts) {
+    return sha256(JSON.stringify([instructions, schema, model, gate])).slice(0, 16);
 }
 
-export const PROMPT_VERSION = computePromptVersion(ANSWER_INSTRUCTIONS, answerSchema, ANSWER_MODEL);
+export const PROMPT_PARTS: PromptParts = {
+    instructions: ANSWER_INSTRUCTIONS,
+    schema: answerSchema,
+    model: ANSWER_MODEL,
+    gate: GATE_THRESHOLD,
+};
+
+export const PROMPT_VERSION = computePromptVersion(PROMPT_PARTS);
 
 export type AnswerCar = Pick<CarModel, "_id" | "make" | "model" | "years" | "description">;
 

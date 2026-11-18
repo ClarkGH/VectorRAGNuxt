@@ -42,3 +42,12 @@ export type CatalogSummary = { models: number; years: YearRange | null };
 // text instead of anything the model wrote. Not verified fact.
 export type AnswerPick = { carId: string; reason: string };
 export type Answer = { noneFit: boolean; picks: AnswerPick[] };
+
+// POST /api/answer. `source` says where the answer came from: the model, the
+// cache, the gate (nothing scored 0.65, so the model was never asked), or the
+// mock answerer used in development.
+export type AnswerResponse = { answer: Answer; source: "model" | "cache" | "gate" | "mock" };
+
+// The `data.reason` on a 429 from /api/answer, so the page can word it.
+// "out-of-quota": the OpenAI account has no usable credit, so waiting won't help.
+export type AnswerLimitReason = "try-again-in-a-minute" | "paused-for-today" | "out-of-quota";
