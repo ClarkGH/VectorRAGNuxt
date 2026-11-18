@@ -6,7 +6,7 @@
 // outcome onto HTTP.
 import type { Db } from "mongodb";
 import OpenAI from "openai";
-import type { Answer, CarDoc } from "../../shared/types/car.ts";
+import type { Answer, CarDoc, YearRange } from "../../shared/types/car.ts";
 import { CARS_COLLECTION, embedTexts } from "../../shared/utils/embedding.ts";
 import {
     ANSWER_INSTRUCTIONS,
@@ -20,6 +20,7 @@ import {
     GATE_THRESHOLD,
     gateScore,
     validateAnswer,
+    type AnswerCar,
     type AnswerRejection,
     type AnswerReply,
     type CatalogCar,
@@ -155,6 +156,55 @@ export type AnswerDeps = {
 // The re-fetched car, without its vector: that's only needed on a cache miss.
 type AnswerCarDoc = Omit<CarDoc, "embedding" | "embeddingModel">;
 
+// --- The model call (shared with the answer check, scripts/answer-check.ts) --
+
+export type ModelOutcome
+    = | { kind: "reply"; reply: AnswerReply }
+        | { kind: "minute-limit" }
+        | { kind: "daily-limit" }
+        | { kind: "out-of-quota" };
+
+// One chat call, never retried. Limits come back as outcomes; anything else throws.
+export async function requestAnswer(
+    openai: OpenAI,
+    query: string,
+    years: YearRange | null,
+    cars: readonly AnswerCar[],
+): Promise<ModelOutcome> {
+    try {
+        const reply = await openai.responses.create(
+            {
+                model: ANSWER_MODEL,
+                instructions: ANSWER_INSTRUCTIONS,
+                input: buildAnswerInput(query, years, cars),
+                reasoning: { effort: "minimal" },
+                max_output_tokens: ANSWER_MAX_OUTPUT_TOKENS,
+                text: { format: { type: "json_schema", name: "car_answer", strict: true, schema: answerSchema } },
+            },
+            // S14: never retried; each retry could spend one of the 50 a day.
+            { maxRetries: 0, timeout: ANSWER_TIMEOUT_MS },
+        );
+        return { kind: "reply", reply };
+    } catch (err) {
+        if (err instanceof OpenAI.RateLimitError) {
+            // No credit left on the account: also a 429, but no "per day" in it.
+            if (err.code === "insufficient_quota") return { kind: "out-of-quota" };
+            // Same check as scripts/describe-cars.ts.
+            return /per day/i.test(err.message) ? { kind: "daily-limit" } : { kind: "minute-limit" };
+        }
+        throw err;
+    }
+}
+
+// The text check needs every catalog name: 475 short rows, read fresh so a
+// re-ingest is picked up without a restart.
+export function loadCatalog(db: Db) {
+    return db
+        .collection<CarDoc>(CARS_COLLECTION)
+        .find<CatalogCar>({}, { projection: { _id: 1, make: 1, model: 1 } })
+        .toArray();
+}
+
 export async function answerSearch(deps: AnswerDeps, req: AnswerRequest): Promise<AnswerOutcome> {
     const { db, openai, mock, limiter, rejections } = deps;
     const collection = db.collection<CarDoc>(CARS_COLLECTION);
@@ -194,40 +244,12 @@ export async function answerSearch(deps: AnswerDeps, req: AnswerRequest): Promis
         return { kind: "answer", answer: { noneFit: true, picks: [] }, source: "gate" };
     }
 
-    let reply: AnswerReply;
-    if (mock) {
-        reply = fakeAnswer(req.query, cars);
-    } else {
-        try {
-            reply = await openai.responses.create(
-                {
-                    model: ANSWER_MODEL,
-                    instructions: ANSWER_INSTRUCTIONS,
-                    input: buildAnswerInput(req.query, parsed.years, cars),
-                    reasoning: { effort: "minimal" },
-                    max_output_tokens: ANSWER_MAX_OUTPUT_TOKENS,
-                    text: { format: { type: "json_schema", name: "car_answer", strict: true, schema: answerSchema } },
-                },
-                // S14: never retried; each retry could spend one of the 50 a day.
-                { maxRetries: 0, timeout: ANSWER_TIMEOUT_MS },
-            );
-        } catch (err) {
-            if (err instanceof OpenAI.RateLimitError) {
-                // No credit left on the account: also a 429, but no "per day" in it.
-                if (err.code === "insufficient_quota") return { kind: "out-of-quota" };
-                // Same check as scripts/describe-cars.ts.
-                return /per day/i.test(err.message) ? { kind: "daily-limit" } : { kind: "minute-limit" };
-            }
-            throw err;
-        }
-    }
+    const asked = mock
+        ? ({ kind: "reply", reply: fakeAnswer(req.query, cars) } as const)
+        : await requestAnswer(openai, req.query, parsed.years, cars);
+    if (asked.kind !== "reply") return asked;
 
-    // The text check needs every catalog name: 475 short rows, read fresh so a
-    // re-ingest is picked up without a restart.
-    const catalog = await collection
-        .find<CatalogCar>({}, { projection: { _id: 1, make: 1, model: 1 } })
-        .toArray();
-    const check = validateAnswer(reply, cars, catalog);
+    const check = validateAnswer(asked.reply, cars, await loadCatalog(db));
     if (!check.ok) {
         if (!mock) rejections.remember(key, check.reason);
         return { kind: "bad-answer", reason: check.reason, repeat: false };

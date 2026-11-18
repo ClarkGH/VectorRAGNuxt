@@ -1,5 +1,11 @@
 <script setup lang="ts">
-const examples = ["civic type r", "small honda", "cheap reliable car"];
+// The landing card's examples, one row per way search works: by name, with a
+// year filter, or by meaning (the AI-written descriptions).
+const searchWays = [
+    { name: "By model", hint: "A name or a trim", searches: ["civic type r", "toyota corolla"] },
+    { name: "With a year", hint: "Only models sold then", searches: ["2018 accord", "2016-2019 mazda3"] },
+    { name: "By description", hint: "What you want, in your words", searches: ["small reliable sedan", "cheap sporty car"] },
+];
 
 const query = ref("");
 const searched = ref("");
@@ -96,27 +102,51 @@ function matchPercent(score: number) {
                         Search
                     </UButton>
                 </form>
-
-                <div
-                    v-if="!results && !error"
-                    class="examples"
-                >
-                    <span class="examples-label">Popular searches:</span>
-                    <button
-                        v-for="text in examples"
-                        :key="text"
-                        type="button"
-                        class="example"
-                        :disabled="loading"
-                        @click="tryExample(text)"
-                    >
-                        {{ text }}
-                    </button>
-                </div>
             </div>
         </header>
 
         <main class="wrap content">
+            <!-- Before the first search: how search works, with examples to try. -->
+            <section
+                v-if="!results && !error"
+                class="start"
+                aria-labelledby="start-title"
+            >
+                <h2
+                    id="start-title"
+                    class="start-title"
+                >
+                    Try a search
+                </h2>
+                <p class="start-sub">
+                    Name a car, add a year, or describe the car you want.
+                </p>
+                <dl class="ways">
+                    <div
+                        v-for="way in searchWays"
+                        :key="way.name"
+                        class="way"
+                    >
+                        <dt>
+                            <span class="way-name">{{ way.name }}</span>
+                            <span class="way-hint">{{ way.hint }}</span>
+                        </dt>
+                        <dd class="way-examples">
+                            <button
+                                v-for="text in way.searches"
+                                :key="text"
+                                type="button"
+                                class="example"
+                                :disabled="loading"
+                                @click="tryExample(text)"
+                            >
+                                {{ text }}
+                            </button>
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
             <div
                 v-if="error"
                 class="notice notice-error"
@@ -163,7 +193,7 @@ function matchPercent(score: number) {
                     <template v-if="years">
                         Showing models sold in {{ formatYears(years) }}.
                     </template>
-                    Bars run from unrelated (50%) to identical (100%).
+                    Match runs from 0% (unrelated) to 100% (identical).
                     <template v-if="hasDescriptions">
                         Descriptions are AI-written and can be wrong.
                     </template>
@@ -197,20 +227,32 @@ function matchPercent(score: number) {
                             <div class="result-head">
                                 <div>
                                     <p class="make">
-                                        {{ car.make }}
+                                        {{ displayMake(car.make) }}
                                     </p>
                                     <p class="model">
                                         {{ car.model }}
                                     </p>
+                                    <p class="years">
+                                        Model years <span class="nowrap">{{ formatYears(car.years) }}</span>
+                                    </p>
                                 </div>
-                                <p class="score">
-                                    <span class="score-number">{{ matchPercent(car.score) }}%</span>
-                                    <span class="score-label">match</span>
-                                </p>
+                                <!-- One score: the number, and its meter right under it. -->
+                                <div class="score">
+                                    <p>
+                                        <span class="score-number">{{ matchPercent(car.score) }}%</span>
+                                        <span class="score-label">match</span>
+                                    </p>
+                                    <div
+                                        class="meter"
+                                        aria-hidden="true"
+                                    >
+                                        <div
+                                            class="meter-fill"
+                                            :style="{ width: `${matchPercent(car.score)}%` }"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <p class="years">
-                                Model years {{ formatYears(car.years) }}
-                            </p>
                             <p
                                 v-if="car.description"
                                 class="description"
@@ -225,15 +267,6 @@ function matchPercent(score: number) {
                                 <span class="pick-label">AI pick</span>
                                 {{ picks.get(car._id) }}
                             </p>
-                            <div
-                                class="bar"
-                                aria-hidden="true"
-                            >
-                                <div
-                                    class="bar-fill"
-                                    :style="{ width: `${matchPercent(car.score)}%` }"
-                                />
-                            </div>
                         </div>
                     </li>
                 </ol>
@@ -319,30 +352,69 @@ h1 {
   justify-content: center;
 }
 
-.examples {
-  margin-top: 1rem;
+/* The landing card: one row per way to search, each with examples to try. */
+.start {
+  padding: 1.25rem 1.5rem 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.start-title {
+  font-size: 1.25rem;
+}
+.start-sub {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.ways {
+  margin-top: 0.75rem;
+}
+.way {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-block: 0.875rem;
+}
+/* The rows are three kinds of search: a rule between them, none after the last. */
+.way + .way {
+  border-top: 1px solid var(--line);
+}
+.way-name {
+  display: block;
+  font-weight: 700;
+}
+.way-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.way-examples {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 0.5rem;
-}
-.examples-label {
-  color: var(--hero-muted);
-  margin-right: 0.25rem;
 }
 .example {
   padding: 0.3rem 0.85rem;
-  border: 1px solid rgb(255 255 255 / 0.35);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  color: #ffffff;
+  background: var(--page);
+  color: var(--score);
+  font-weight: 600;
   cursor: pointer;
 }
 .example:hover:not(:disabled) {
-  background: rgb(255 255 255 / 0.12);
+  border-color: var(--blue);
 }
 .example:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+@media (max-width: 34rem) {
+  .way {
+    grid-template-columns: 1fr;
+  }
 }
 
 .content {
@@ -431,8 +503,18 @@ h2 {
 }
 .score {
   flex-shrink: 0;
+  width: 6.5rem;
   text-align: right;
   line-height: 1.1;
+}
+@media (max-width: 34rem) {
+  .score {
+    width: 4.5rem;
+  }
+}
+/* A year range never splits across lines ("2016–" / "2026"). */
+.nowrap {
+  white-space: nowrap;
 }
 .score-number {
   display: block;
@@ -473,14 +555,15 @@ h2 {
   font-weight: 700;
   font-size: 0.875rem;
 }
-.bar {
-  margin-top: 0.875rem;
+/* The score's meter, under its number: same 0-100% as the number. */
+.meter {
+  margin-top: 0.5rem;
   height: 0.375rem;
   border-radius: 999px;
   background: var(--track);
   overflow: hidden;
 }
-.bar-fill {
+.meter-fill {
   height: 100%;
   border-radius: inherit;
   background: var(--bar);
@@ -493,7 +576,7 @@ h2 {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bar-fill {
+  .meter-fill {
     animation: none;
   }
 }

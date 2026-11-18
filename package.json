@@ -17,6 +17,7 @@
     "describe": "node --env-file-if-exists=.env scripts/describe-cars.ts",
     "ingest": "node --env-file-if-exists=.env scripts/ingest-cars.ts",
     "eval": "node --env-file-if-exists=.env scripts/eval.ts",
+    "answer-check": "node --env-file-if-exists=.env scripts/answer-check.ts",
     "screenshot": "node scripts/screenshot.ts",
     "browser:install": "playwright install chromium-headless-shell",
     "typecheck": "nuxt typecheck && tsc -p scripts",

@@ -74,6 +74,14 @@ Search always returns the nearest cars, even for nonsense. So when no result sco
 
 The right-hand case is why a score threshold alone can't say "we don't carry that": real near misses ("pickup truck" scores 0.75) land above it too. Those are left to the AI answer, which can say none of the cars fit ([G spec, decision 1](specs/generate.md#decisions-clarks-calls)).
 
+### Asking the AI which results fit
+
+Under the results heading, **Explain these results** asks the AI which of the cars fit the search. It reads only the descriptions shown and may pick only those cars. It marks each pick on its result card with the reason, and the summary links to them. When none fit, it says so with fixed page text instead of making something up.
+
+![Search for "small honda hatchback": the summary says "1 of 5 fit: Fit (#1)", labeled as AI-written, and the HONDA Fit card has a blue edge and an "AI pick" note saying it's a subcompact hatchback matching the search](images/ai-answer-small-honda-hatchback.png)
+
+A real answer from gpt-5-mini: of the five closest cars, it picked only the Honda Fit, and its reason comes straight from the Fit's description. The other cards are left as they are, since not picking a car isn't a verdict on it. Each answer costs one of the free tier's 50 chat calls a day, so answers only run on request and repeats come from a cache ([G spec](specs/generate.md)).
+
 ## Cost
 
 - **Writing descriptions:** a few cents for the whole catalog, once. Only new cars are described on later runs.
