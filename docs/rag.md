@@ -70,6 +70,16 @@ These are expectations, not measurements yet; the table gets real scores once we
 - **Each search:** one tiny AI call, a fraction of a cent.
 - **Risk:** each search costs a little money, so the app must not be public until it has login or rate limits. For now it runs locally only.
 
+## Using AI safely
+
+Three rules sit under every AI piece of this project. They're the bread and butter, not extras:
+
+1. **Least privilege.** The model gets only what it needs for one job. Writing descriptions, it sees a list of car names. Answering a search (the G step), it sees the five retrieved cars and nothing else in the catalog.
+2. **Read-only by default.** The model never acts. It can't write to the database, call other services or follow links. Code decides what happens with its answer.
+3. **Never combine untrusted input with tools that can act.** Anything the model reads might contain instructions: a visitor's search, or a description another model wrote. So its output is treated as data, not commands. It's checked against a strict shape, cleaned, and thrown away if it names a car it wasn't given.
+
+The detailed rules are P1–P7 and S1–S17 in the specs ([ingest and search](specs/ingest-search.md), [generation](specs/generate.md)). A future [MCP](https://modelcontextprotocol.io) server would follow the same three: one read-only search tool, run locally, with the server, not the model, deciding what's allowed.
+
 ## Glossary
 
 - **Embedding / vector:** a car's (or request's) position on the map of meaning, stored as a long list of numbers.
