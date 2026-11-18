@@ -35,6 +35,7 @@ Stop Mongo with `docker compose down` (data is kept in a Docker volume; `down -v
 | `pnpm test:integration` | Ingest + vector search + year filter + index upgrade against real Mongo with a stand-in OpenAI (needs `docker compose up -d`; no OpenAI key) |
 | `pnpm test:relevance` | Real searches against the real database and embeddings: 5 pass/fail checks plus 3 known weak spots, with a top-5 table to compare before and after a change. Run by hand; needs `pnpm ingest` done and the key. See the [runbook](docs/runbook.md#check-search-quality) |
 | `pnpm eval run` / `compare` | Scores search against the labeled searches in `eval/golden.json` (nDCG, Hit@1, MRR, Recall) and calls a change a win, loss or inconclusive. Run by hand; about 24 embeddings calls per run. See [Measuring search quality](docs/evaluation.md) and the [runbook](docs/runbook.md#score-search-quality) |
+| `pnpm answer-check --label <name>` | Checks the AI answers against the committed rules in `eval/answer-check.json`: grounded, refuses when it should, resists prompt injection. About 11 chat calls of the free tier's 50 a day; `--mock` tries it for free. See the [runbook](docs/runbook.md#run-the-answer-check) |
 
 There's no CI: this is a local learning project, so run `pnpm check` before you push.
 
@@ -62,8 +63,8 @@ I want to see the closest car related to what was prompted
 
 ### Sad Path
 As a User
-When I submit a prompt for a van
-I only see cars, vans and SUVs are not scraped
+When I submit a prompt for a pickup truck
+I'm told nothing fits: the catalog is mostly passenger cars, with a few SUVs and no pickups
 
 ## Tech Stack
 

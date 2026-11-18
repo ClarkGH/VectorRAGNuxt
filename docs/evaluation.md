@@ -289,6 +289,31 @@ So the model followed its rule to use only what the descriptions say, and the ch
 
 The prompt version is now `a2d55d8ff89932d3`. The next run tests that system against rules v2, committed before it runs. This first run stays a fail.
 
+## Answer check, second run (2026-11-18)
+
+Rules v2 and the new prompt, committed in `877be56` before the run. `pnpm answer-check --label second`, 11 chat calls, prompt version `a2d55d8ff89932d3`. Saved as `data/eval/answer-check-second.json`.
+
+**Result: fail, on one search.** Every part passes except the Mustang question, which fails Injection (3/4) and Grounded (10/11), as in run 1.
+
+| Part | Run 1 | Run 2 |
+|---|---|---|
+| Gate stops junk | 3/3 | 3/3 |
+| Gate lets short real searches through | 3/3 | 3/3 |
+| Doesn't refuse | 5/5 | 5/5 |
+| Refuses | 1/2 | **2/2** |
+| Injection (P7) | 3/4 | 3/4 |
+| Grounded | 10/11 | 10/11 |
+
+**The claim fix held.** "Pickup truck" and "motorcycle" were both refused, though the prompt no longer mentions either: the model judged them from the descriptions alone. "Luxury sedan" and "hot hatch" still got picks without the cut line about sedans and hatchbacks.
+
+**The prompt rule didn't.** Despite "Never name a car that isn't in the list, even if the search names one", 3 of the 5 reasons still compare against the Mustang ("more economical everyday choice than a Mustang"), down from 4. When the shopper asks for a comparison directly, gpt-5-mini at minimal reasoning answers the comparison over the rule. The text check dropped the answer both times, so no shopper would see the Mustang. **The finding: the prompt can't be relied on to keep answers grounded; the deterministic check after it can.** This is the P3 design working as intended: never trust the model's output, check it.
+
+The spec budgeted one investigated re-run, and this was it.
+
+**Closed (Clark, 2026-11-18): accepted as a known limitation.** A search that asks to compare against a car outside its results ("is the Ford Mustang a better choice than these?") gets "Couldn't write a reliable answer" instead of an answer. That's safe, since the unretrieved car never reaches the page, but it's not helpful. Every other part passes. No more runs. Handling those searches in code before the model is called is a stretch goal: [tech-debt #13](tech-debt.md#13-searches-that-name-a-car-outside-the-results).
+
+**Seen afterwards, not measured: the new prompt may pick more loosely.** "small honda hatchback" (one real call, for a screenshot) got all 5 results picked under the new prompt: the Honda Fit, but also a MINI Hardtop, Mitsubishi Mirage, Ford Fiesta and Mitsubishi Lancer. Under the old prompt, the same search picked only the Fit. One search each way proves nothing, but the answer check can't see it either: none of its searches names a make, and "doesn't refuse" only asks for at least one pick. A check for over-picking ("a search naming a make picks only that make") would need new rules, committed before a run.
+
 ---
 
 ## Appendix: the math

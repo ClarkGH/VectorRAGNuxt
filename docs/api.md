@@ -104,6 +104,69 @@ The 502 never says what actually went wrong. The details go to the server log, i
 
 Each search makes one OpenAI embeddings call, costing a tiny fraction of a cent. It counts against the OpenAI account's rate limits for `text-embedding-3-small`, so very heavy use returns 502s until the limit resets. The app itself has no rate limiting.
 
+## `POST /api/answer`
+
+Asks an AI which of a search's results fit, and why. The page calls it from "Explain these results". How it works, step by step: [rag.md §9](rag.md#9-how-the-g-works). The rules behind it: the [G spec](specs/generate.md).
+
+```bash
+curl -s http://localhost:3000/api/answer \
+  -H 'content-type: application/json' \
+  -d '{"query": "electric car", "resultIds": ["452-32328", "467-30005"]}'
+```
+
+### Request
+
+JSON, sent with `Content-Type: application/json`, the same as search.
+
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `query` | string | yes | 1–500 characters after trimming: the search, as typed |
+| `resultIds` | string[] | yes | 1–5 unique car ids (`makeId-modelId`, like `474-1863`), in the order search returned them. The server re-fetches these cars itself; car data from the browser is never used |
+
+### Response: 200
+
+```json
+{
+  "answer": {
+    "noneFit": false,
+    "picks": [
+      { "carId": "452-32328", "reason": "Midsize luxury electric sedan offering advanced EV tech, comfort and refined performance." }
+    ]
+  },
+  "source": "model"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `answer.noneFit` | `true` when none of the cars fit. Then `picks` is empty, and the page shows fixed text rather than anything the model wrote |
+| `answer.picks` | 1–5 picks, best first, only from `resultIds`. Each `reason` is one plain-text sentence, at most 200 characters. **AI-written, not verified fact**: show it labeled as such |
+| `source` | `model` (just written), `cache` (a repeat: no AI call), `gate` (nothing scored 0.65, so the AI wasn't asked; always `noneFit: true`), or `mock` (the development stand-in, see [mock mode](runbook.md#use-real-ai-answers)) |
+
+The types are `AnswerResponse` and `Answer` in [`shared/types/car.ts`](../shared/types/car.ts).
+
+### Errors
+
+| Status | When | `statusMessage` | `data.reason` |
+|---|---|---|---|
+| 415 | The body isn't sent as JSON | `Content-Type must be application/json` | |
+| 400 | Bad `query`, or `resultIds` isn't 1–5 unique car ids | describes the problem | |
+| 400 | A `resultIds` entry isn't in the catalog | `resultIds must be cars from the catalog` | |
+| 429 | More than 5 new answers this minute, or OpenAI's per-minute limit | `Too many answers this minute; try again in a minute` | `try-again-in-a-minute` |
+| 429 | OpenAI's daily limit is used up (50 a day on the free tier) | `Answers are paused for today` | `paused-for-today` |
+| 429 | The OpenAI account has no credit left | `Answers are unavailable: the OpenAI account is out of credit` | `out-of-quota` |
+| 502 | The AI's reply failed a check (wrong shape, an id it wasn't given, naming a car that wasn't retrieved, too long, markup), or was rejected in the last 10 minutes | `Couldn't write a reliable answer this time` | |
+| 502 | Mongo or OpenAI failed some other way | `Answers are unavailable right now` | |
+
+The page words each 429 from `data.reason`, so it never has to parse the message. As with search, the server log gets the details (a rejection's reason code, never the answer text) and the client gets a generic message.
+
+### Cost and limits
+
+- **One chat call per new answer**, on the free tier's 50 a day. Repeats come from a 30-day cache and cost nothing. A search with nothing close never reaches the AI.
+- **One embeddings call** per uncached request, for the gate.
+- **At most 5 uncached requests a minute**, for the whole server, gated ones included. A dropped answer's search is refused for 10 minutes, so a search the AI keeps getting wrong can't drain the day.
+- **The chat call is never retried**, and has a 45-second timeout.
+
 ## `GET /api/catalog`
 
 Says what's loaded: how many car models, and the span of their model years. The page uses it for its footer and "no results" text, so those never hard-code years. It reads Mongo only, with no OpenAI call.

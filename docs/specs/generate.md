@@ -1,6 +1,6 @@
 # Spec: AI-written answers (the "G" in RAG)
 
-**Status:** draft 2026-11-16; decisions settled and stack review applied 2026-11-17. Being built: [build plan](#build-plan-from-2026-11-18) steps 1–6 (answer core, search flag, answer cache, endpoint, answer panel, real smoke test: "electric car" picked all 5 EVs, "pickup truck" refused, the repeat came from the cache; 2 chat calls) done 2026-11-18 · **Background:** [How VectorRAGNuxt works](../rag.md#9-where-the-g-fits-later) · **Builds on:** ["Find the closest car" search](ingest-search.md)
+**Status: built (2026-11-18).** Drafted 2026-11-16, decisions settled and stack review applied 2026-11-17; all 8 [build plan](#build-plan-from-2026-11-18) steps done 2026-11-18. The answer check passes every part except comparison searches that name a car outside the results, accepted as a known limitation ([evaluation.md](../evaluation.md#answer-check-second-run-2026-11-18), stretch fix in [tech-debt #13](../tech-debt.md#13-searches-that-name-a-car-outside-the-results)). Two success checks don't fully pass; see [How we'll know it works](#how-well-know-it-works) · **Background:** [How VectorRAGNuxt works](../rag.md#9-how-the-g-works) · **Builds on:** ["Find the closest car" search](ingest-search.md)
 
 ## Summary
 
@@ -45,28 +45,30 @@ Search shows a ranked list; it doesn't say *why* a car fits or admit when nothin
 
 ## How we'll know it works
 
-- [ ] "electric car" gets an answer that names only cars from its search results, in its ids and in its text.
-- [ ] "pickup truck", "family suv" and "asdf qwerty" get "nothing fits," not recommendations.
-- [ ] An answer naming a car that wasn't retrieved, by id or in its text, is dropped whole by the server and never reaches the page.
-- [ ] A reason using an everyday word that is also a model name ("a good fit for commuters", "a light roadster") is not dropped.
-- [ ] "asdf qwerty" shows "nothing close" on the search page without pressing the button, at no chat-model cost.
-- [ ] The score threshold is checked by the server from its own scores, on the same scale and the same text as search; a request can't get past it by sending a score.
-- [ ] "2018 accord" gets the same gate score from `/api/answer` as its top search score.
-- [ ] Changing the prompt, the schema, the model or a car's description means old cached answers are no longer served.
-- [ ] Explaining a search that's already cached makes no OpenAI call at all, not even an embedding.
-- [ ] One click spends at most one chat call: the chat call is never retried.
-- [ ] A model reply cut off by the token cap (`status: "incomplete"`) is dropped like any other bad answer.
-- [ ] The injection test set (P7) passes: no off-topic replies, no prompt leaked, nothing rendered as HTML, only retrieved cars named.
-- [ ] Development and the automated tests run with mocked answers, at zero cost.
-- [ ] Hitting the daily limit shows "answers are paused for today" right away, without retries, while search keeps working.
-- [ ] Double-clicking "Explain these results" sends one request; the button is disabled until the answer arrives (S14).
-- [ ] A 6th uncached request within a minute is refused by the server, whether or not it passed the gate (S14).
-- [ ] The cache holds no shopper text: only hashed keys and validated answers (S11, S12).
-- [ ] Explaining "pickup truck" twice spends one call: the refusal is cached.
-- [ ] In mock mode, nothing is read from or written to the cache.
-- [ ] Malformed `resultIds` (wrong format, more than 5, duplicates, objects) get a 400 (S13).
-- [ ] An answer containing invisible or text-direction characters comes back with them removed (S15).
-- [ ] The answer check (decision 7) is scored and logged in [evaluation.md](../evaluation.md).
+Checked 2026-11-18 (step 8). Evidence in brackets; the two that don't fully pass say so.
+
+- [x] "electric car" gets an answer that names only cars from its search results, in its ids and in its text. *(Step 6 smoke test, and both answer-check runs.)*
+- [x] "pickup truck" and "asdf qwerty" get "nothing fits," not recommendations. *(Both answer-check runs; "asdf qwerty" is stopped by the gate.)* **"family suv" was the wrong expectation:** 27 catalog models are crossovers, SUVs or vans, so it has real matches. Removed in answer-check rules v2 ([evaluation](../evaluation.md#failure-1-family-suv-the-test-was-wrong-about-the-data)).
+- [x] An answer naming a car that wasn't retrieved, by id or in its text, is dropped whole by the server and never reaches the page. *(Unit and integration tests; seen live with the Mustang question in both answer-check runs.)*
+- [x] A reason using an everyday word that is also a model name ("a good fit for commuters", "a light roadster") is not dropped. *(Unit tests.)*
+- [x] "asdf qwerty" shows "nothing close" on the search page without pressing the button, at no chat-model cost. *(Step 2: unit and integration tests, checked by hand.)*
+- [x] The score threshold is checked by the server from its own scores, on the same scale and the same text as search; a request can't get past it by sending a score. *(`/api/answer` accepts no score; the gate re-embeds `parseYearFilter(query).text` and uses (1 + cos) / 2. Unit and integration tests.)*
+- [ ] "2018 accord" gets the same gate score from `/api/answer` as its top search score. **Not measured directly.** It holds by construction (same text, same formula as Mongo's score, unit-tested), but no test compares the two numbers for this search.
+- [x] Changing the prompt, the schema, the model or a car's description means old cached answers are no longer served. *(Unit tests on the cache key and computed prompt version, which also covers the gate threshold and model years.)*
+- [x] Explaining a search that's already cached makes no OpenAI call at all, not even an embedding. *(Integration test; step 6: the repeat came from the cache in 19 ms.)*
+- [x] One click spends at most one chat call: the chat call is never retried. *(Integration test: a 500 is sent once, even with the client set to retry twice.)*
+- [x] A model reply cut off by the token cap (`status: "incomplete"`) is dropped like any other bad answer. *(Unit and integration tests.)*
+- [ ] The injection test set (P7) passes: no off-topic replies, no prompt leaked, nothing rendered as HTML, only retrieved cars named. **3 of 4 pass.** No leak, no markup, and the Ferrari attack failed. The Mustang question makes the model name an unretrieved car, so the answer is dropped and never shown. Accepted as a known limitation ([evaluation](../evaluation.md#answer-check-second-run-2026-11-18)); fixing it in code is [tech-debt #13](../tech-debt.md#13-searches-that-name-a-car-outside-the-results).
+- [x] Development and the automated tests run with mocked answers, at zero cost. *(`answerMock` defaults to true; the tests use the fake OpenAI server.)*
+- [x] Hitting the daily limit shows "answers are paused for today" right away, without retries, while search keeps working. *(Integration test for the 429 and no retry; the panel state in `pnpm screenshot`.)*
+- [x] Double-clicking "Explain these results" sends one request; the button is disabled until the answer arrives (S14). *(Checked by keyboard in a real browser: two quick presses sent one request. The button is `aria-disabled` rather than `disabled`, so keyboard focus isn't lost. No automated test.)*
+- [x] A 6th uncached request within a minute is refused by the server, whether or not it passed the gate (S14). *(Integration test; checked over HTTP in step 4.)*
+- [x] The cache holds no shopper text: only hashed keys and validated answers (S11, S12). *(Integration test on the stored documents.)*
+- [x] Explaining "pickup truck" twice spends one call: the refusal is cached. *(Integration test, "caches a refusal".)*
+- [x] In mock mode, nothing is read from or written to the cache. *(Integration test.)*
+- [x] Malformed `resultIds` (wrong format, more than 5, duplicates, objects) get a 400 (S13). *(Unit tests; checked over HTTP in step 4.)*
+- [x] An answer containing invisible or text-direction characters comes back with them removed (S15). *(Unit tests.)*
+- [x] The answer check (decision 7) is scored and logged in [evaluation.md](../evaluation.md). *(Two runs, both logged.)*
 
 ## Risks
 
@@ -220,7 +222,7 @@ Eight steps, each ending in something testable. Steps 1–5 spend **no chat call
 | 5 | **Answer panel** on the search page: "Explain these results" (debounced, disabled while loading), the answer labeled AI-written, plain text only (P5), the fixed refusal text, and "paused for today" / "try again in a minute" messages | `pnpm screenshot` (mocked) shows the panel in each state; `pnpm check` passes | 0 |
 | 6 | **Real smoke test:** "electric car" and "pickup truck" through the real model, then "electric car" again | Picks for the first, the refusal text for the second, and the repeat comes from the cache (no call) | 2 |
 | 7 | **Answer check** (decision 7): write the searches and pass rules to a file and commit them *before* running, then run it with its own pacing | All parts pass, or each failure is investigated and logged, never re-rolled. Results in [evaluation.md](../evaluation.md) | about 11 (+11 for one investigated re-run) |
-| 8 | **Docs:** [rag.md §9](../rag.md#9-where-the-g-fits-later) becomes "How the G works", [api.md](../api.md) gets `/api/answer`, the [runbook](../runbook.md) gets mock mode and running the answer check, this spec's status becomes "built" | Every success check above is ticked or has a note | 0 |
+| 8 | **Docs:** [rag.md §9](../rag.md#9-how-the-g-works) becomes "How the G works", [api.md](../api.md) gets `/api/answer`, the [runbook](../runbook.md) gets mock mode and running the answer check, this spec's status becomes "built" | Every success check above is ticked or has a note | 0 |
 
 If a day runs out of calls, steps 1–5 and 8 still move forward; only 6 and 7 wait.
 

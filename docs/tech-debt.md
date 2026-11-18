@@ -27,6 +27,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
+| 13 | Searches that name a car outside the results get no answer | Code, UX | 2 | 1 | 2 | 12, stretch |
 | 10 | Niche makers crowd out real answers: remove them from the dataset | Data | 4 | 3 | 2 | done (83 makers) |
 | 4 | No Dependabot | Dependency | | | | done |
 | 3 | No relevance check with real embeddings | Test | 4 | 3 | 2 | done |
@@ -35,6 +36,14 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 6 | Two TypeScript aliases | Dependency | | | | done |
 | 8 | Year-range formatting written three times | Code | | | | done |
 | 2 | AI descriptions aren't backed up | Data | | | | won't do |
+
+### 13. Searches that name a car outside the results
+
+**Stretch (Clark, 2026-11-18).** Found by the answer check ([second run](evaluation.md#answer-check-second-run-2026-11-18)). Asked "is the Ford Mustang a better choice than these?", the model compares against the Mustang even when told never to name a car outside the list (3 of 5 reasons in run 2). The text check drops the answer, so it's safe, but the shopper only sees "Couldn't write a reliable answer".
+
+**The fix, in code rather than the prompt:** before calling the model, run the text check's matcher (`findMentions` in `server/utils/answer.ts`) on the search itself. If it names a catalog car that isn't in the results, skip the model and show fixed text, such as "The Ford Mustang isn't in these results. Search for it to see it." That's deterministic, costs no chat call, and gives the shopper a next step. Prompt rules can't be relied on for this (two runs showed it); a check in code can.
+
+**The catch:** the answer check's injection searches call the model directly, so this fix doesn't change their result. Testing it there means rules v3 routing those searches through the app's flow, written up as a change made after seeing a failure, and committed before its run.
 
 ### 11. Stack review before the G slice (2026-11-17)
 

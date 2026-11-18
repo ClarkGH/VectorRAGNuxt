@@ -156,6 +156,29 @@ The grade is about the car and the words typed, never about where search put it.
 
 **Clean up** the baseline database when done: `docker compose exec mongo mongosh vector_rag_names --quiet --eval "db.dropDatabase()"`.
 
+## Use real AI answers
+
+**When:** you want to see what the AI really says. Otherwise leave it off: real answers spend the free tier's **50 chat calls a day**.
+
+Answers are mocked by default. In mock mode, "Explain these results" uses a fake answerer, labeled "Mock answer for development" on the page, and never reads or writes the answer cache, so a fake answer can never be served later. Search and the gate still run for real (one embeddings call each).
+
+1. Start the app with mock mode off, for this run only: `NUXT_ANSWER_MOCK=false pnpm dev`
+2. Search, then click **Explain these results**. Each new answer costs one call; a repeat of the same search comes from the cache and costs nothing.
+3. Stop the server (Ctrl+C) when you're done. A plain `pnpm dev` goes back to mock mode.
+
+If an answer comes back "Couldn't write a reliable answer", the `pnpm dev` terminal says why, as a reason code (for example `answer dropped: names-unretrieved-car`). The answer text itself is never logged.
+
+## Run the answer check
+
+**When:** after changing the answer prompt, the model, the checks in `server/utils/answer.ts`, or the descriptions. It tests whether answers stay grounded, refuse when they should, and resist prompt injection. Background and past results: [evaluation.md](evaluation.md#answer-check-first-run-2026-11-18).
+
+1. **Change the rules first, if they need to change,** in [eval/answer-check.json](../eval/answer-check.json): bump `version` and say why in `changes`. **Commit before running**, so the bar can't move to fit the results. Pick searches from the data, never from what the model answered.
+2. **Try the runner for free:** `pnpm answer-check --label try --mock`. It uses the fake answerer (no chat calls, only embeddings). The gate parts are real results even in mock mode.
+3. **Check the day's usage.** A real run is about **11 chat calls**.
+4. **Run it once:** `pnpm answer-check --label <name>`. It takes about 80 seconds (calls are spaced 7 seconds apart), skips the cache, and stops if the daily limit is hit.
+5. **Read the result.** The bar is 100% of every part. It saves `data/eval/answer-check-<name>.json`, with the model's raw replies, and never overwrites a saved run.
+6. **On a fail, investigate; don't re-run.** Read the raw replies and log what happened in [evaluation.md](evaluation.md). A re-run only makes sense after a real change (prompt, code or rules), committed first.
+
 ## Check the search page in a browser
 
 **When:** after changing the page, to see it without clicking around.
@@ -164,12 +187,14 @@ The grade is about the car and the words typed, never about where search put it.
 2. Start the app: `pnpm dev`
 3. `pnpm screenshot`. This writes `screenshots/search-desktop.png`, `search-dark.png` and `search-phone.png`.
 
-By default the search results are made up (`page.route` answers `/api/search`), so it costs nothing and shows every kind of result row: with and without a description, long and short year spans, and a year filter. Options:
+By default the search results are made up (`page.route` answers `/api/search`), so it costs nothing and shows every kind of result row: with and without a description, long and short year spans, and a year filter.
+
+It also shoots the answer panel in every state, with made-up answers (`/api/answer` is never really called): `answer-picks.png` (whole page, plus `-dark` and `-phone`), and the panel alone for `refusal`, `loading`, `minute`, `paused`, `quota`, `failed` and `stale`. Options:
 
 | Flag | Does |
 |---|---|
 | `--query "small honda"` | Types something else (default `2018 corolla`) |
-| `--real` | Uses the real search API: one OpenAI embeddings call per screenshot |
+| `--real` | Uses the real search API: one OpenAI embeddings call per screenshot. Skips the answer panel states |
 | `--url http://localhost:3100` | Points at another running server |
 
 It exits with an error, and lists them, if the page logs any console errors. `screenshots/` isn't committed.

@@ -49,7 +49,7 @@ flowchart LR
 **What's missing, and why it matters:**
 - **Almost no SUVs or vans, and no pickups.** The government database files most of them separately, so searching for "family SUV" won't find a Honda CR-V. A few slip in as passenger cars: 27 of the 475 models are described as crossovers, SUVs or vans (the Tesla Model X, Volvo XC90 and Nissan Kicks among them). There are no pickups at all. *Vans in particular have pulled quite the van-ishing act.*
 - **No verified facts, prices or specs.** The descriptions come from an AI's general knowledge, not a spec sheet, so they can be wrong. The page says so. Cars the AI doesn't recognize are described as "Lesser-known model from MAKE" rather than guessed at. *We asked it not to make things up, and unlike a used-car salesman, it mostly listens.*
-- **No curation.** Limo builders and kit-car makers are included alongside Toyota and BMW, and they can show up in results.
+- **Light curation.** 83 niche makers (limo builders, kit cars and replicas) crowded out real answers, so they were removed ([tech-debt #10](tech-debt.md#10-remove-niche-makers-from-the-dataset)). Everything else NHTSA lists as a passenger car is in, including the few SUVs.
 
 ## What to expect from results
 
@@ -246,8 +246,22 @@ The trade-off is that the name is now a smaller share of the text, so pure name 
 
 A year isn't meaning, it's a fact, so it doesn't go into the vector. `"2018 accord"` embeds as `"accord"` and adds a pre-filter: only docs whose `years` array contains any of 2016–2020 are searched at all. Pre-filtering happens inside the HNSW walk, so you still get `limit` results (when that many exist) rather than five results minus whatever a later filter throws away.
 
-### 9. Where the "G" fits later
+### 9. How the "G" works
 
-Generation pastes the top results into a chat prompt and lets the model write the answer. Retrieval decides which facts the model sees, so it has to be right first.
+Generation hands the top results to a chat model and lets it write the answer. Retrieval decides which facts the model sees, so it had to be right first ([evaluation](evaluation.md)). The full design and its reasons are in the [G spec](specs/generate.md); this is the short version.
+
+**What happens when you click "Explain these results"** (`POST /api/answer`, [api.md](api.md#post-apianswer)):
+
+1. **Check the request.** JSON only, a query, and 1–5 car ids in the right format. The server fetches those cars itself and never trusts car data sent by the browser.
+2. **Look in the cache.** A repeat of the same search, with the same cars, prompt and descriptions, costs nothing. The cache stores a hash of the search, never the text.
+3. **Count it.** At most 5 uncached answers a minute, since the free tier allows 50 chat calls a day.
+4. **The gate.** Re-embed the search and score it against those cars. Under 0.65 on Mongo's scale ([§5](#5-what-mongos-score-means)), nothing is close and the model is never asked.
+5. **Ask the model once.** gpt-5-mini gets the rules as instructions and the search and cars as data, never as instructions. It must reply in a fixed JSON shape: either "none fit", or up to 5 picks, each a car id and a one-sentence reason. The call is never retried, since each retry could spend another of the 50.
+6. **Check the reply in code.** It's dropped if it's cut short, has the wrong shape, picks an id it wasn't given, names a catalog car that wasn't retrieved, is too long, or contains markup or links. Invisible and text-direction characters are removed first.
+7. **Cache it and show it.** Only a reply that passed every check is cached. The page marks each pick on its result card and labels the answer AI-written. "None fit" is shown as fixed page text, never as model text.
+
+**Why step 6 matters:** the [answer check](evaluation.md#answer-check-second-run-2026-11-18) found that, when a search asks to compare against a car that isn't in the results ("is the Ford Mustang a better choice?"), the model names it anyway, even when the prompt says never to. Only the check in code catches that. The model's output is treated as untrusted input, the same as anything a user types.
+
+**In development,** answers are mocked by default, with a fake answerer and no cache, so building the page costs nothing. Set `NUXT_ANSWER_MOCK=false` for real answers ([runbook](runbook.md#use-real-ai-answers)).
 
 </details>
