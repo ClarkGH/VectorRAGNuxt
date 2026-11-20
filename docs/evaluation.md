@@ -330,6 +330,20 @@ Clark searched "gas efficient car" and got 52% or less, with cars like the Prius
 
 Not fixed; logged as [tech-debt #14](tech-debt.md#14-search-quality-on-everyday-wording). Before changing anything, add searches like this to the golden set (labels reviewed by Clark), so a fix is measured rather than eyeballed.
 
+### Measured: the "before" (2026-11-19)
+
+Three searches added to the golden set: "gas efficient car", "good on gas" (the same label on purpose, so only the wording differs) and "cheap to run". Labels drafted from the catalog, not from search results, and reviewed by Clark with no grade changed. Run `described-wording`, no change to search:
+
+| Search | nDCG@5 | Hit@1 | Top 5 (grade) |
+|---|---|---|---|
+| gas efficient car | **0.73** | 1 | Prius C (2), Spark (2), e-Golf (0, electric), Jetta (1), Insight (2) |
+| good on gas | **1.00** | 1 | Prius C, Insight, Civic, Spark, Prius V (all 2) |
+| cheap to run | **0.91** | 1 | Spark, Prius C, Lancer, Corolla (2), Fiesta (1) |
+
+The 21 older searches score exactly as before, so concept goes from 0.98 to 0.95 and all of it is the new three. Overall: nDCG@5 0.97, Hit@1 1.00 on 24 searches.
+
+**What it says:** the ranking problem is real but narrow. One phrasing ("gas efficient") lets in an electric car and misses the regular Prius; another ("good on gas") is perfect, and the top result is right in all three. So most of what Clark noticed by hand is the **display**: the right car, the Prius C, shown as 52%. Caveat: these labels are wide (26–39 cars graded 2), which makes nDCG@5 forgiving. That's accurate to what a shopper would accept, but small regressions would hardly move it.
+
 ---
 
 ## Appendix: the math

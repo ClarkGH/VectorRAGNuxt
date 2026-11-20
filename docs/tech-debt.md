@@ -47,6 +47,8 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 Measure first: no fix until the golden set has searches like this and a before score.
 
+**Measured 2026-11-19** ([before](evaluation.md#measured-the-before-2026-11-19)): "gas efficient car" 0.73, "good on gas" 1.00, "cheap to run" 0.91, and Hit@1 is 1.00 on all three. The ranking issue is one phrasing, not everyday wording in general. **The bigger visible problem is the display:** the right top car shows as 52%. Next is Clark's UX call on the display; the ranking fix (shopper words in descriptions, or hybrid keyword-plus-vector search) can wait for a second failing search.
+
 ### 13. Searches that name a car outside the results
 
 **Stretch (Clark, 2026-11-18).** Found by the answer check ([second run](evaluation.md#answer-check-second-run-2026-11-18)). Asked "is the Ford Mustang a better choice than these?", the model compares against the Mustang even when told never to name a car outside the list (3 of 5 reasons in run 2). The text check drops the answer, so it's safe, but the shopper only sees "Couldn't write a reliable answer".
