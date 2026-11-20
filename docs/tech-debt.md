@@ -28,7 +28,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
 | 13 | Searches that name a car outside the results get no answer | Code, UX | 2 | 1 | 2 | 12, stretch |
-| 14 | Search quality on everyday wording ("gas efficient car"), and match percentages that read low | Search, UX | 3 | 2 | 3 | 15 |
+| 14 | Search quality on everyday wording ("gas efficient car"); the display half is done (words, not percentages) | Search | 2 | 1 | 3 | 9 |
 | 10 | Niche makers crowd out real answers: remove them from the dataset | Data | 4 | 3 | 2 | done (83 makers) |
 | 4 | No Dependabot | Dependency | | | | done |
 | 3 | No relevance check with real embeddings | Test | 4 | 3 | 2 | done |
@@ -47,7 +47,9 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 Measure first: no fix until the golden set has searches like this and a before score.
 
-**Measured 2026-11-19** ([before](evaluation.md#measured-the-before-2026-11-19)): "gas efficient car" 0.73, "good on gas" 1.00, "cheap to run" 0.91, and Hit@1 is 1.00 on all three. The ranking issue is one phrasing, not everyday wording in general. **The bigger visible problem is the display:** the right top car shows as 52%. Next is Clark's UX call on the display; the ranking fix (shopper words in descriptions, or hybrid keyword-plus-vector search) can wait for a second failing search.
+**Measured 2026-11-19** ([before](evaluation.md#measured-the-before-2026-11-19)): "gas efficient car" 0.73, "good on gas" 1.00, "cheap to run" 0.91, and Hit@1 is 1.00 on all three. The ranking issue is one phrasing, not everyday wording in general. **The bigger visible problem is the display:** the right top car shows as 52%. The ranking fix (shopper words in descriptions, or hybrid keyword-plus-vector search) can wait for a second failing search.
+
+**Display: done 2026-11-19 (Clark chose words).** Results show "Strong match", "Possible match" or "Weak match", with cut-offs set from every top-5 score of the golden set ([evaluation](evaluation.md#the-match-display-why-words-not-percentages-2026-11-19)). That measurement also found the deeper problem: a mid score can't tell a right answer from a wrong one, whatever the scale. So #14 stays open for the ranking half only.
 
 ### 13. Searches that name a car outside the results
 

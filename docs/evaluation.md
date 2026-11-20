@@ -344,6 +344,42 @@ The 21 older searches score exactly as before, so concept goes from 0.98 to 0.95
 
 **What it says:** the ranking problem is real but narrow. One phrasing ("gas efficient") lets in an electric car and misses the regular Prius; another ("good on gas") is perfect, and the top result is right in all three. So most of what Clark noticed by hand is the **display**: the right car, the Prius C, shown as 52%. Caveat: these labels are wide (26–39 cars graded 2), which makes nDCG@5 forgiving. That's accurate to what a shopper would accept, but small regressions would hardly move it.
 
+## The match display: why words, not percentages (2026-11-19)
+
+### The problem
+
+The page showed each result's score as a percentage, rescaled so that 0.5 (unrelated) is 0% and 1.0 is 100% ([rag.md §5](rag.md#5-what-mongos-score-means)). The math was right, but it read wrong. Real searches top out around 0.75–0.85, which showed as 50–70%: Clark's correct top result for "gas efficient car" (the Prius C, 0.758) showed as **52%**, which reads like a coin flip.
+
+### What the scores can and can't say
+
+Every top-5 result of the 27 golden searches, with its reviewed grade (135 results, embeddings only):
+
+| Score | Results | Right (graded 1 or 2) | Out-of-catalog and junk searches |
+|---|---|---|---|
+| 0.78 and up | 45 | **93%** (42); 3 wrong, the highest at 0.793 | none |
+| 0.65–0.78 | 75 | **63%** (47) | all 10 results of "pickup truck" and "family suv" (0.69–0.75) |
+| under 0.65 | 0 | | all 5 of "asdf qwerty" (0.59–0.60) |
+
+**The real problem isn't the scaling; it's that a mid score is ambiguous.** The correct Prius C (0.758) sits in the same band as "pickup truck"'s top result (0.752), a car the catalog doesn't have. No rescaling can separate them, because the information isn't in the score. A percentage pretends to a precision the score doesn't have. Three findings follow:
+
+1. **Above about 0.78, a result is very likely right.** That's worth saying plainly.
+2. **Between the gate (0.65) and 0.78, it's a coin toss weighted toward right.** The honest message is "maybe", and that's where the AI answer earns its keep: "Explain these results" reads the descriptions and says which ones fit.
+3. **Below 0.65, it's junk.** The "Nothing close" notice already says so.
+
+### The decision (Clark, 2026-11-19): words
+
+Each result shows a word instead of a percentage, from cut-offs set from the table above, before the change:
+
+| Word | Score | Why that cut-off |
+|---|---|---|
+| **Strong match** | 0.78 and up | 93% right, and no out-of-catalog or junk result ever reached it |
+| **Possible match** | 0.65 to 0.78 | 63% right, and where out-of-catalog searches land. Starts at the gate, the same 0.65 used for "Nothing close" and the AI answer |
+| **Weak match** | under 0.65 | Only junk scored here |
+
+**Considered and rejected:** rescaling to the real range (0.65 to 0.85 as 0–100%) keeps a number but still invites "only 54%?", and its end points are as arbitrary as the old ones. Bars relative to the top result show ranking, but say nothing about whether even the best car fits. Explaining the percentage leaves the misleading number in place.
+
+**Limits:** the cut-offs come from 24 labeled searches and one embedding model. A new model, new descriptions or many more searches means re-running this table, and the cut-offs live in one file so that's a one-line change. The API still returns the raw score; only the page shows words.
+
 ---
 
 ## Appendix: the math

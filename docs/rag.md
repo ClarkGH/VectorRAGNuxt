@@ -70,8 +70,10 @@ Search always returns the nearest cars, even for nonsense. So when no result sco
 
 | Gibberish: flagged | A near miss: not flagged |
 |---|---|
-| ![Search for "wakka wakka huba dooba": a "Nothing close to that in the catalog" notice above results at 20% and 18% match](images/nothing-close-flagged.png) | ![Search for "donkey shaped car": no notice, results at 40% and 38% match](images/nothing-close-near-miss.png) |
-| Top result 20% (score 0.60), under the line | Top result 40% (score 0.70), just over it, though nothing really fits |
+| ![Search for "wakka wakka huba dooba": a "Nothing close to that in the catalog" notice above results marked "Weak match"](images/nothing-close-flagged.png) | ![Search for "donkey shaped car": no notice, results marked "Possible match"](images/nothing-close-near-miss.png) |
+| Top score 0.60, under the line: "Weak match" | Top score 0.70, just over it: "Possible match", though nothing really fits |
+
+Each result is marked **Strong match** (0.78 and up), **Possible match** (0.65 to 0.78) or **Weak match** (under 0.65), not a percentage. A mid score can't tell a right answer from a wrong one: out-of-catalog searches like "pickup truck" score in the same range as correct results. So the page says "possible" rather than a precise-looking number, and "Explain these results" can say which possible matches fit. The data and the decision: [evaluation.md](evaluation.md#the-match-display-why-words-not-percentages-2026-11-19).
 
 The right-hand case is why a score threshold alone can't say "we don't carry that": real near misses ("pickup truck" scores 0.75) land above it too. Those are left to the AI answer, which can say none of the cars fit ([G spec, decision 1](specs/generate.md#decisions-clarks-calls)).
 
@@ -79,9 +81,9 @@ The right-hand case is why a score threshold alone can't say "we don't carry tha
 
 Under the results heading, **Explain these results** asks the AI which of the cars fit the search. It reads only the descriptions shown and may pick only those cars. It marks each pick on its result card with the reason, and the summary links to them. When none fit, it says so with fixed page text instead of making something up.
 
-![Search for "small honda hatchback": the summary says "1 of 5 fit: Fit (#1)", labeled as AI-written, and the HONDA Fit card has a blue edge and an "AI pick" note saying it's a subcompact hatchback matching the search](images/ai-answer-small-honda-hatchback.png)
+![Search for "small honda hatchback": the summary says "5 of 5 fit: Fit (#1), Hardtop (#2), Mirage (#3), Fiesta (#4), and Lancer SportBack (#5)", labeled as AI-written, and the Honda Fit card, marked "Strong match", has a blue edge and an "AI pick" note saying it's a subcompact hatchback matching the search](images/ai-answer-small-honda-hatchback.png)
 
-A real answer from gpt-5-mini: of the five closest cars, it picked only the Honda Fit, and its reason comes straight from the Fit's description. The other cards are left as they are, since not picking a car isn't a verdict on it. Each answer costs one of the free tier's 50 chat calls a day, so answers only run on request and repeats come from a cache ([G spec](specs/generate.md)).
+A real answer from gpt-5-mini, and an imperfect one, kept on purpose. It picked all five: the Honda Fit, but also a MINI, a Mitsubishi and a Ford, which aren't Hondas. Under the earlier prompt, the same search picked only the Fit. The likely cause is that the descriptions leave out the make, and the current prompt says to judge each car only by its description ([evaluation.md](evaluation.md#answer-check-second-run-2026-11-18)). Cars it doesn't pick are left as they are, since not picking a car isn't a verdict on it. Each answer costs one of the free tier's 50 chat calls a day, so answers only run on request and repeats come from a cache ([G spec](specs/generate.md)).
 
 ## Cost
 
@@ -230,7 +232,7 @@ $$
 
 The Civic scores 0.98 and the BMW 0.68. A score of 0.5 means unrelated. Real scores bunch up, so rank matters more than the absolute number, and you shouldn't hard-code a threshold without looking at real scores first.
 
-The page doesn't show this score directly. Since 0.5 already means unrelated, its "% match" and bar both show $(\text{score} - 0.5) / 0.5$: the Civic at 0.98 shows 96%, and "asdf qwerty" at 0.60 shows 20%, not 60%. Thresholds in code and docs (like the G step's 0.65) stay on Mongo's scale.
+The page doesn't show this score directly. Until 2026-11-19 it showed a rescaled percentage, $(\text{score} - 0.5) / 0.5$, since 0.5 already means unrelated. That was correct but misleading: real searches land at 0.75–0.85, so a right answer showed as about 52%, and a mid score turned out to be ambiguous anyway (right and wrong answers both land there). The page now shows a word instead: **Strong match** from 0.78, **Possible match** from 0.65, **Weak match** below ([evaluation.md](evaluation.md#the-match-display-why-words-not-percentages-2026-11-19)). The cut-offs live in `shared/utils/match-strength.ts`. Thresholds in code and docs (like the G step's 0.65) stay on Mongo's scale.
 
 ### 6. Exact vs approximate search
 

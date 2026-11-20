@@ -54,11 +54,10 @@ function tryExample(text: string) {
     search();
 }
 
-// Mongo's score runs 0..1, but 0.5 already means "unrelated", so the page shows
-// 0.5..1 as 0..100%. One helper feeds both the number and the bar, so they can't drift apart.
-function matchPercent(score: number) {
-    return Math.round(Math.min(Math.max((score - 0.5) / 0.5, 0), 1) * 100);
-}
+// The match is shown as a word, not a percentage: a mid score can't tell a
+// right answer from a wrong one (docs/evaluation.md, "The match display").
+// Steps fill the small meter beside it: 3 strong, 2 possible, 1 weak.
+const MATCH_STEPS: Record<MatchStrength, number> = { strong: 3, possible: 2, weak: 1 };
 </script>
 
 <template>
@@ -193,7 +192,7 @@ function matchPercent(score: number) {
                     <template v-if="years">
                         Showing models sold in {{ formatYears(years) }}.
                     </template>
-                    Match runs from 0% (unrelated) to 100% (identical).
+                    A strong match is very likely right; a possible match may or may not fit.
                     <template v-if="hasDescriptions">
                         Descriptions are AI-written and can be wrong.
                     </template>
@@ -236,19 +235,23 @@ function matchPercent(score: number) {
                                         Model years <span class="nowrap">{{ formatYears(car.years) }}</span>
                                     </p>
                                 </div>
-                                <!-- One score: the number, and its meter right under it. -->
-                                <div class="score">
-                                    <p>
-                                        <span class="score-number">{{ matchPercent(car.score) }}%</span>
-                                        <span class="score-label">match</span>
+                                <!-- The match in words; the steps repeat it visually, so they're hidden from screen readers. -->
+                                <div
+                                    class="score"
+                                    :data-strength="matchStrength(car.score)"
+                                >
+                                    <p class="strength">
+                                        {{ MATCH_LABEL[matchStrength(car.score)] }}
                                     </p>
                                     <div
-                                        class="meter"
+                                        class="steps"
                                         aria-hidden="true"
                                     >
-                                        <div
-                                            class="meter-fill"
-                                            :style="{ width: `${matchPercent(car.score)}%` }"
+                                        <span
+                                            v-for="n in 3"
+                                            :key="n"
+                                            class="step"
+                                            :class="{ on: n <= MATCH_STEPS[matchStrength(car.score)] }"
                                         />
                                     </div>
                                 </div>
@@ -503,29 +506,49 @@ h2 {
 }
 .score {
   flex-shrink: 0;
-  width: 6.5rem;
+  min-width: 6.5rem;
   text-align: right;
   line-height: 1.1;
+  white-space: nowrap;
 }
+/* On phones the word wraps ("Possible" / "match") to leave room for the name. */
 @media (max-width: 34rem) {
   .score {
+    min-width: 0;
     width: 4.5rem;
+    white-space: normal;
   }
 }
 /* A year range never splits across lines ("2016–" / "2026"). */
 .nowrap {
   white-space: nowrap;
 }
-.score-number {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--score);
-  font-variant-numeric: tabular-nums;
+/* The word carries the meaning; color only reinforces it. */
+.strength {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  line-height: 1.25;
 }
-.score-label {
+.score[data-strength="strong"] .strength {
+  color: var(--score);
+}
+.score[data-strength="weak"] .strength {
   color: var(--muted);
-  font-size: 0.8125rem;
+}
+.steps {
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.2rem;
+}
+.step {
+  width: 1rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--track);
+}
+.step.on {
+  background: var(--bar);
 }
 .years {
   margin-top: 0.25rem;
@@ -555,32 +578,6 @@ h2 {
   font-weight: 700;
   font-size: 0.875rem;
 }
-/* The score's meter, under its number: same 0-100% as the number. */
-.meter {
-  margin-top: 0.5rem;
-  height: 0.375rem;
-  border-radius: 999px;
-  background: var(--track);
-  overflow: hidden;
-}
-.meter-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--bar);
-  transform-origin: left;
-  animation: grow 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-@keyframes grow {
-  from {
-    transform: scaleX(0);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .meter-fill {
-    animation: none;
-  }
-}
-
 .source {
   margin-top: auto;
   padding-top: 2rem;

@@ -73,7 +73,7 @@ A real response, from the example request above:
 | `results[].years` | Every model year the car was sold, sorted |
 | `results[].description` | Present only once `pnpm describe` has run for that car. **AI-written, not verified fact**: show it labeled as such |
 | `results[].embeddingText` | The exact text that was turned into the car's vector, useful for debugging matches |
-| `results[].score` | 0 to 1. **0.5 means unrelated**, so read it as a ranking rather than a percentage (see [the math](rag.md#5-what-mongos-score-means)) |
+| `results[].score` | 0 to 1. **0.5 means unrelated**, so read it as a ranking rather than a percentage (see [the math](rag.md#5-what-mongos-score-means)). The page shows it as a word: 0.78 and up is a strong match, 0.65 and up a possible one (`matchStrength` in `shared/utils/match-strength.ts`) |
 | `years` | The year filter that was applied, `[from, to]`, or `null` if the query had no year |
 | `nothingClose` | `true` when no result scores at least **0.65**, including when there are no results. The results are still the nearest cars, but none is a real match ("pickup truck", "asdf"). Same threshold as the AI answer's gate ([G spec, decision 1](specs/generate.md#decisions-clarks-calls)), so the page can say "nothing close" without spending an AI call |
 
