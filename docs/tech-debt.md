@@ -24,6 +24,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 | # | Item | Type | I | R | E | Score |
 | --- | --- | --- | --- | --- | --- | --- |
+| 15 | Yellow accents, direction C (Search button, band stripe, AI pick notes) | Design | 1 | 1 | 2 | 8, after the MCP server |
 | 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
@@ -37,6 +38,24 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 | 6 | Two TypeScript aliases | Dependency | | | | done |
 | 8 | Year-range formatting written three times | Code | | | | done |
 | 2 | AI descriptions aren't backed up | Data | | | | won't do |
+
+### 15. Yellow accents, direction C
+
+**Chosen 2026-11-20 (Clark); build after the [MCP server](specs/mcp-server.md).** Bring in some of the car-pricing-site yellow, close to Kelley Blue Book's feel without copying it. Three directions were mocked up in light and dark next to today's page; Clark picked **C, mixed**: yellow for the brand and the AI, blue for search data. The mock-ups are on a private design canvas (Clark's claude.ai artifacts, "Closest Car — yellow accents").
+
+**What changes:**
+
+| Element | Light | Dark |
+|---|---|---|
+| Search button | `#F6C445` background, navy text `#0b2343`, bold (about 9:1) | Same |
+| Navy band | A 6 px yellow stripe along its bottom edge | Same; it also separates the band from the dark page, which sit close in color |
+| "AI pick" notes on result cards | Background `#FFF4D1`, label `#6B4E00` | Background `#3A3115`, label in the yellow |
+
+**What stays blue:** match strength and its meter, rank numbers, the cards' inset edge, links, and the answer panel. Yellow is never used for text on white, where it fails contrast.
+
+**How:** new tokens in [main.css](../app/assets/css/main.css), in both `:root` and `.dark` (for example `--brand`, `--brand-ink`, `--pick-bg`, `--pick-label`), and the Search button gets its own class instead of the shared `.action-button`. Then re-check contrast and focus rings in both themes, and refresh the screenshots (`docs/images/` and the portfolio).
+
+**Decide when building:** the "Explain these results" button. It's an AI action, which argues for yellow, but in C only Search is yellow and the mock-up shows the answered state, where the button is gone. Also check that the yellow's focus ring is visible on the white search box.
 
 ### 14. Search quality on everyday wording
 
