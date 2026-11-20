@@ -389,23 +389,15 @@ Each result shows a word instead of a percentage, from cut-offs set from the tab
 
 For the top 5 results with grades $g_1 \dots g_5$ (2, 1 or 0):
 
-$$
-\text{DCG@5} = \sum_{i=1}^{5} \frac{2^{g_i} - 1}{\log_2(i + 1)}
-$$
+$\displaystyle \text{DCG@5} = \sum_{i=1}^{5} \frac{2^{g_i} - 1}{\log_2(i + 1)}$
 
 A grade-2 answer is worth 3, a grade-1 answer is worth 1, and lower positions are discounted. **nDCG** divides by the DCG of the best possible ordering (IDCG), so a perfect top 5 scores 1.0.
 
 Example: the right answers are one grade-2 car and one grade-1 car. The search returns them 2nd and 4th:
 
-$$
-\text{DCG} = \frac{3}{\log_2 3} + \frac{1}{\log_2 5} = 1.89 + 0.43 = 2.32
-\qquad
-\text{IDCG} = \frac{3}{1} + \frac{1}{\log_2 3} = 3 + 0.63 = 3.63
-$$
+$\displaystyle \text{DCG} = \frac{3}{\log_2 3} + \frac{1}{\log_2 5} = 1.89 + 0.43 = 2.32 \qquad \text{IDCG} = \frac{3}{1} + \frac{1}{\log_2 3} = 3 + 0.63 = 3.63$
 
-$$
-\text{nDCG@5} = 2.32 / 3.63 = 0.64
-$$
+$\displaystyle \text{nDCG@5} = 2.32 / 3.63 = 0.64$
 
 Moving the grade-2 car to 1st would score 0.94.
 

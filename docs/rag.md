@@ -168,9 +168,7 @@ The sections below are for engineers and the curious. Click to expand.
 
 An embedding model is a function from text to a list of numbers:
 
-$$
-E(\text{"HONDA Civic"}) = \mathbf{v} = (v_1, v_2, \dots, v_{1536}) \in \mathbb{R}^{1536}
-$$
+$\displaystyle E(\text{"HONDA Civic"}) = \mathbf{v} = (v_1, v_2, \dots, v_{1536}) \in \mathbb{R}^{1536}$
 
 No single dimension means "is a sedan"; meaning is spread across all 1,536 numbers. What we can rely on is the geometry: **closeness in space ≈ closeness in meaning.**
 
@@ -178,19 +176,11 @@ No single dimension means "is a sedan"; meaning is spread across all 1,536 numbe
 
 For $\mathbf{a}, \mathbf{b} \in \mathbb{R}^n$:
 
-$$
-\mathbf{a} \cdot \mathbf{b} = \sum_{i=1}^{n} a_i b_i
-\qquad
-\|\mathbf{a}\| = \sqrt{\mathbf{a} \cdot \mathbf{a}}
-\qquad
-\mathbf{a} \cdot \mathbf{b} = \|\mathbf{a}\|\,\|\mathbf{b}\| \cos\theta
-$$
+$\displaystyle \mathbf{a} \cdot \mathbf{b} = \sum_{i=1}^{n} a_i b_i \qquad \Vert \mathbf{a}\Vert = \sqrt{\mathbf{a} \cdot \mathbf{a}} \qquad \mathbf{a} \cdot \mathbf{b} = \Vert \mathbf{a}\Vert \thinspace\Vert \mathbf{b}\Vert\cos\theta$
 
 Rearranged, that's **cosine similarity**, the measure our index uses:
 
-$$
-\cos\theta = \frac{\mathbf{a} \cdot \mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}
-$$
+$\displaystyle \cos\theta = \frac{\mathbf{a} \cdot \mathbf{b}}{\Vert \mathbf{a}\Vert \thinspace\Vert \mathbf{b}\Vert}$
 
 A value of 1 means the same direction (same meaning) and 0 means perpendicular (unrelated). Cosine compares direction and ignores length.
 
@@ -198,11 +188,9 @@ A value of 1 means the same direction (same meaning) and 0 means perpendicular (
 
 ### 3. Why cosine, dot product and distance all agree here
 
-OpenAI's embeddings are normalized ($\|\mathbf{a}\| = 1$), so $\cos\theta = \mathbf{a}\cdot\mathbf{b}$ and
+OpenAI's embeddings are normalized ($\Vert \mathbf{a}\Vert = 1$), so $\cos\theta = \mathbf{a}\cdot\mathbf{b}$ and
 
-$$
-\|\mathbf{a} - \mathbf{b}\|^2 = \mathbf{a}\cdot\mathbf{a} - 2\,\mathbf{a}\cdot\mathbf{b} + \mathbf{b}\cdot\mathbf{b} = 2 - 2\cos\theta
-$$
+$\displaystyle \Vert \mathbf{a} - \mathbf{b}\Vert^2 = \mathbf{a}\cdot\mathbf{a} - 2\thinspace \mathbf{a}\cdot\mathbf{b} + \mathbf{b}\cdot\mathbf{b} = 2 - 2\cos\theta$
 
 Higher cosine ⇔ higher dot product ⇔ smaller distance: all three rank results identically. We use `cosine` because it stays correct even with a model that doesn't normalize.
 
@@ -214,21 +202,15 @@ Higher cosine ⇔ higher dot product ⇔ smaller distance: all three rank result
 | "HONDA Civic" | $\mathbf{a} = (0.6,\ 0.8,\ 0)$ |
 | "BMW M8" | $\mathbf{b} = (0,\ 0.6,\ 0.8)$ |
 
-$$
-\mathbf{q}\cdot\mathbf{a} = 0.48 + 0.48 = 0.96 \ (\theta \approx 16^\circ)
-\qquad
-\mathbf{q}\cdot\mathbf{b} = 0.36 \ (\theta \approx 69^\circ)
-$$
+$\displaystyle \mathbf{q}\cdot\mathbf{a} = 0.48 + 0.48 = 0.96 \ (\theta \approx 16^\circ) \qquad \mathbf{q}\cdot\mathbf{b} = 0.36 \ (\theta \approx 69^\circ)$
 
-The Civic wins. Distance agrees: $\|\mathbf{q}-\mathbf{a}\|^2 = 0.2^2 + 0.2^2 = 0.08 = 2 - 2(0.96)$.
+The Civic wins. Distance agrees: $\Vert \mathbf{q}-\mathbf{a}\Vert^2 = 0.2^2 + 0.2^2 = 0.08 = 2 - 2(0.96)$.
 
 ### 5. What Mongo's score means
 
 `$vectorSearch` rescales cosine from $[-1, 1]$ to $[0, 1]$:
 
-$$
-\text{score} = \frac{1 + \cos\theta}{2}
-$$
+$\displaystyle \text{score} = \frac{1 + \cos\theta}{2}$
 
 The Civic scores 0.98 and the BMW 0.68. A score of 0.5 means unrelated. Real scores bunch up, so rank matters more than the absolute number, and you shouldn't hard-code a threshold without looking at real scores first.
 
