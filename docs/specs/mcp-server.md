@@ -112,9 +112,9 @@ Each tool call is one embeddings call (`text-embedding-3-small`): a tiny fractio
 
 ### Open (Clark's calls)
 
-A. **What does the tool take?**
-   - **Suggested: `query` (string, required) and `limit` (integer, optional, default 5, at most 10).** Years work inside the query, exactly as on the page ("2018 accord"), because the same `parseYearFilter` runs.
-   - The plan sketched a separate `year` field. It would be easier for an assistant to fill in, but it's a second way to say the same thing, and it would need its own rules for when it and a year in the text disagree.
+A. **What does the tool take?** **Decided (Clark, 2026-11-23): `query` and `limit`, no `year` field.**
+   - **`query` (string, required) and `limit` (integer, optional, default 5, at most 10).** Years work inside the query, exactly as on the page ("2018 accord"), because the same `parseYearFilter` runs.
+   - Not a separate `year` field, as the plan sketched. It would be easier for an assistant to fill in, but it's a second way to say the same thing, and it would need its own rules for when it and a year in the text disagree.
    - Why at most 10, not the web's 20: every result lands in the assistant's context, and results below the top 10 are rarely strong.
 
 B. **What does each result say about match quality?**
