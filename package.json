@@ -31,10 +31,10 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
-    "@nuxt/ui": "^4.12.2",
-    "mongodb": "^7.9.0",
+    "@nuxt/ui": "^4.13.0",
+    "mongodb": "^7.9.1",
     "nuxt": "^4.6.4",
-    "openai": "^7.59.0",
+    "openai": "^7.62.0",
     "tailwindcss": "^4.3.5",
     "vue": "^3.5.45"
   },
