@@ -96,7 +96,7 @@ const MATCH_STEPS: Record<MatchStrength, number> = { strong: 3, possible: 2, wea
                         type="submit"
                         size="xl"
                         :loading="loading"
-                        class="action-button search-button"
+                        class="brand-button search-button"
                     >
                         Search
                     </UButton>
@@ -302,11 +302,14 @@ const MATCH_STEPS: Record<MatchStrength, number> = { strong: 3, possible: 2, wea
   padding-inline: 1rem;
 }
 
-/* Navy band with the search, like a car-pricing site's landing page. */
+/* Navy band with the search, like a car-pricing site's landing page. The yellow
+   stripe along its bottom is the brand; in dark mode it also separates the band
+   from the page, which sit close in color. */
 .hero {
   background: var(--navy);
   color: #ffffff;
   padding: 1.25rem 0 2.5rem;
+  box-shadow: inset 0 -6px 0 var(--brand);
 }
 .wordmark {
   font-weight: 800;
@@ -349,7 +352,7 @@ h1 {
 .search :deep(.search-input:focus-visible) {
   box-shadow: inset 0 0 0 2px var(--blue);
 }
-/* Colors, hover and focus come from .action-button (main.css). */
+/* Colors, hover and focus come from .brand-button (main.css). */
 .search-button {
   padding-inline: 1.5rem;
   justify-content: center;
@@ -561,20 +564,20 @@ h2 {
   line-height: 1.5;
   max-width: 60ch;
 }
-/* AI-written, so it sits on the rank chips' tint, apart from the description. */
+/* AI-written, so it sits on the brand's yellow tint, apart from the description. */
 .pick-note {
   margin-top: 0.75rem;
   padding: 0.625rem 0.875rem;
   max-width: 60ch;
   border-radius: 0.5rem;
-  background: var(--rank-bg);
+  background: var(--pick-bg);
   color: var(--ink);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .pick-label {
   display: block;
-  color: var(--rank-ink);
+  color: var(--pick-label);
   font-weight: 700;
   font-size: 0.875rem;
 }

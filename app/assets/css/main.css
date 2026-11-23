@@ -6,7 +6,10 @@
   --font-sans: "Open Sans", system-ui, sans-serif;
 }
 
-/* Car-pricing-site palette: navy band, cool gray page, white cards, one blue for actions.
+/* Car-pricing-site palette: navy band, cool gray page, white cards. Yellow for
+   the brand and the AI (the Search button, the band's stripe, AI pick notes);
+   blue for search data and other actions (match strength, ranks, links).
+   Chosen as "direction C", docs/tech-debt.md #15. Yellow is never text on white.
    Nuxt UI toggles .dark on <html> from the system setting. */
 :root {
   --navy: #0b2343;
@@ -24,6 +27,11 @@
   --rank-bg: #e7effb;
   --rank-ink: #134c9f;
   --danger: #c0392b;
+  --brand: #f6c445;
+  --brand-hover: #e8b021;
+  --brand-ink: #0b2343;
+  --pick-bg: #fff4d1;
+  --pick-label: #6b4e00;
 }
 
 .dark {
@@ -42,6 +50,11 @@
   --rank-bg: #1f3152;
   --rank-ink: #b9d0f7;
   --danger: #e06a5d;
+  --brand: #f6c445;
+  --brand-hover: #ffd35c;
+  --brand-ink: #0b2343;
+  --pick-bg: #3a3115;
+  --pick-label: #f6c445;
 }
 
 body {
@@ -49,7 +62,7 @@ body {
   color: var(--ink);
 }
 
-/* The one action style: the search button and "Explain these results".
+/* The blue action style: "Explain these results".
    Unlayered, so it wins over Nuxt UI's utility classes. */
 .action-button {
   background: var(--blue);
@@ -62,5 +75,22 @@ body {
 }
 .action-button:focus-visible {
   outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The brand action: the Search button. Navy on yellow (about 9:1). It sits on
+   the white search panel in both themes, so the focus ring is navy too.
+   Unlayered, like .action-button. */
+.brand-button {
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 800;
+  border-radius: 0.5rem;
+}
+.brand-button:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--brand-hover);
+}
+.brand-button:focus-visible {
+  outline: 3px solid var(--brand-ink);
   outline-offset: 2px;
 }
