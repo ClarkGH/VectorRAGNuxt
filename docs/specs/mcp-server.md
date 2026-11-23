@@ -1,6 +1,6 @@
 # Spec: car search as an MCP tool
 
-**Status:** draft, 2026-11-20. Five setup decisions settled; [three open](#open-clarks-calls); nothing built · **Builds on:** ["Find the closest car" search](ingest-search.md) and [AI-written answers](generate.md) · **Background:** [How VectorRAGNuxt works](../rag.md)
+**Status:** draft 2026-11-20; [all eight decisions](#decisions) settled 2026-11-23. Nothing built yet; next is [build step 1](#build-plan) · **Builds on:** ["Find the closest car" search](ingest-search.md) and [AI-written answers](generate.md) · **Background:** [How VectorRAGNuxt works](../rag.md)
 
 ## Summary
 
@@ -91,7 +91,7 @@ It's also the piece of this project that teaches the "agentic" side: **the assis
 |---|---|---|
 | S18 | **Stdout is the protocol.** Nothing the server runs writes to stdout except the SDK's transport. Logs use `console.error` (stderr). `.mcp.json` runs `node` directly, not through `pnpm`. The stdio integration test fails on any non-protocol line | With stdio, stdout *is* the connection: a stray `console.log` corrupts the message stream and the client drops the server |
 | S19 | **Validate twice, the same way as the web.** The SDK checks the tool's input schema (types, required fields); then the handler runs `parseSearchBody` (1–500 characters, integer `limit`) and `parseYearFilter`, and checks the tool's own `limit` cap (decision A). Only `query` and `limit` are ever read, so any other field has no effect; whether the SDK rejects or drops unknown fields is confirmed in step 2. A failure stops the call before anything is embedded | S2 applied to the new caller. One validation path means the tool can't accept what the web API rejects |
-| S20 | **Per-session limits.** At most N calls a minute and M per session (decision C); over the limit, a tool error that says which limit and when it resets. A session is one server process (one client connection) | The assistant decides when to call. A loop shouldn't be able to run unbounded, even at a fraction of a cent per call |
+| S20 | **Per-session limits.** At most 10 calls a minute and 100 per session (decision C); over the limit, a tool error that says which limit and when it resets. A session is one server process (one client connection) | The assistant decides when to call. A loop shouldn't be able to run unbounded, even at a fraction of a cent per call |
 | S21 | **Allow-listed, cleaned output.** Each result carries only id, make, model, years, description, and match strength (decision B). The search as a whole carries `nothingClose`, `years` (the parsed range, or null) and one `note`: "Descriptions are AI-written and can be wrong.", the page's wording. Descriptions pass through `cleanText` (S15). Never `embedding`, `embeddingText` or `embeddingModel` | `searchCars` returns the Mongo document minus vectors; an explicit allow-list keeps future fields from leaking by default |
 | S22 | **Generic errors out, details to stderr.** The client sees "Search is unavailable right now" (as the web's 502 says). The server logs `error.message` to stderr, never the request, the key or the Mongo URI | S6 applied to the new caller. The client's model might repeat an error message to the user, or into a log |
 | S23 | **Read-only, and said so.** The only tool searches. It's declared read-only and closed-world in its annotations. No write tools, no chat-model calls | Least privilege (P1's idea, applied to us as the tool): the worst a misused tool can do is search |
@@ -110,25 +110,25 @@ Each tool call is one embeddings call (`text-embedding-3-small`): a tiny fractio
 4. **Tests, no new eval.** Search quality is already measured on the same `searchCars`. New tests cover the MCP layer: unit tests for the handler, and one integration test over real stdio (including S18). Not a tool-use eval.
 5. **Docs: this spec first, then additions to existing docs.** [api.md](../api.md) gets a `search_cars` section, the [runbook](../runbook.md) gets "Use the search from Claude Code", [rag.md](../rag.md) gets "where MCP fits", the README gets one row. No separate `docs/mcp.md`.
 
-### Open (Clark's calls)
+### Settled 2026-11-23 (were open)
 
 A. **What does the tool take?** **Decided (Clark, 2026-11-23): `query` and `limit`, no `year` field.**
    - **`query` (string, required) and `limit` (integer, optional, default 5, at most 10).** Years work inside the query, exactly as on the page ("2018 accord"), because the same `parseYearFilter` runs.
    - Not a separate `year` field, as the plan sketched. It would be easier for an assistant to fill in, but it's a second way to say the same thing, and it would need its own rules for when it and a year in the text disagree.
    - Why at most 10, not the web's 20: every result lands in the assistant's context, and results below the top 10 are rarely strong.
 
-B. **What does each result say about match quality?**
-   - **Suggested: the match strength in words ("strong", "possible", "weak"), from `matchStrength()`, and no raw score.** That's the same call the page made (a mid score can't tell right from wrong, so a precise number misleads), and the same reason the G prompt leaves scores out: a model repeats numbers back as facts ("a 0.71 match").
+B. **What does each result say about match quality?** **Decided (Clark, 2026-11-23): words, no raw score; `nothingClose` and `years` for the whole search.**
+   - **The match strength in words ("strong", "possible", "weak"), from `matchStrength()`, and no raw score.** That's the same call the page made (a mid score can't tell right from wrong, so a precise number misleads), and the same reason the G prompt leaves scores out: a model repeats numbers back as facts ("a 0.71 match").
    - Plus, for the whole search, `nothingClose` (from `isNothingClose()`) and `years` (the parsed range), as `/api/search` returns. Without `years`, the assistant can't tell "2018 accord" was filtered to 2016–2020 and may present the results as every Accord.
-   - The alternative is to include the raw score too, for transparency. It's easy to add later; hard to take back once something depends on it.
+   - Not the raw score as well, for now. It's easy to add later; hard to take back once something depends on it.
 
-C. **The limits' numbers.**
-   - **Suggested: 10 calls a minute, 100 a session.** A person in Claude Code rarely needs more than a handful; a loop hits 10 in seconds.
+C. **The limits' numbers.** **Decided (Clark, 2026-11-23): 10 calls a minute, 100 a session.**
+   - **10 calls a minute, 100 a session**, a session being one server process. A person in Claude Code rarely needs more than a handful; a loop hits 10 in seconds.
    - Over the limit: a tool error such as "Limit reached: 10 searches a minute. Try again in 40 seconds.", so the assistant can tell the user instead of retrying blindly.
 
 ---
 
-## Build plan (after the open decisions)
+## Build plan
 
 Five steps, each ending in something testable. Steps 1–2 cost nothing; 3–4 spend a few embeddings.
 
