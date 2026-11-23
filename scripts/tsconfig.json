@@ -1,10 +1,10 @@
 {
-  // Node-side code: scripts and tests. Nuxt's strict node config, plus Node's types.
+  // Node-side code: scripts, the MCP server and tests. Nuxt's strict node config, plus Node's types.
   // erasableSyntaxOnly keeps scripts runnable by Node's built-in type stripping.
   "extends": "../.nuxt/tsconfig.node.json",
   "compilerOptions": {
     "types": ["node"],
     "erasableSyntaxOnly": true
   },
-  "include": ["./**/*.ts", "../tests/**/*.ts"]
+  "include": ["./**/*.ts", "../mcp/**/*.ts", "../tests/**/*.ts"]
 }

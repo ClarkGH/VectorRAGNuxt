@@ -24,7 +24,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 | # | Item | Type | I | R | E | Score |
 | --- | --- | --- | --- | --- | --- | --- |
-| 15 | Yellow accents, direction C (Search button, band stripe, AI pick notes) | Design | 1 | 1 | 2 | 8, after the MCP server |
+| 15 | Yellow accents, direction C (Search button, band stripe, AI pick notes) | Design | 1 | 1 | 2 | 8, next (the MCP server is built) |
 | 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
