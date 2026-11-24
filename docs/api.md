@@ -2,6 +2,8 @@
 
 The app's server has three endpoints. The search page uses `POST /api/search` and `GET /api/catalog`, and you can call them directly with `curl` while `pnpm dev` is running.
 
+An AI assistant can also search the catalog through an MCP tool, `search_cars`, at the [end of this page](#mcp-tool-search_cars).
+
 There's no authentication: the app is meant to run on your own computer only (see [security](specs/ingest-search.md#security-and-safety)). Don't expose it publicly until it has login or rate limits, because every search costs a little OpenAI money.
 
 ## `POST /api/search`
@@ -194,3 +196,78 @@ curl -s http://localhost:3000/api/health
 ```
 
 If Mongo is unreachable it returns a **503** with `Database is unavailable right now`, and the reason goes to the server log only (S6).
+
+## MCP tool: `search_cars`
+
+The same search as `POST /api/search`, for AI assistants that speak [MCP](https://modelcontextprotocol.io) (Model Context Protocol). It isn't an HTTP endpoint: the assistant's app starts `mcp/server.ts` as a child process and talks to it over stdin and stdout. In this repo, Claude Code picks it up from [`.mcp.json`](../.mcp.json) as `car-search` ([runbook](runbook.md#use-the-search-from-claude-code)). The design and its rules (S18–S23): the [MCP spec](specs/mcp-server.md).
+
+The tool is read-only, and its annotations say so (`readOnlyHint: true`, `openWorldHint: false`). It never calls the chat model.
+
+### Arguments
+
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `query` | string | yes | 1–500 characters after trimming. Years in the text filter by model year, as on the page ("2018 accord") |
+| `limit` | integer | no | 1–10, default 5. Lower than the web's 20: every result goes into the assistant's context |
+
+Any other field is dropped before the tool sees it.
+
+### Result
+
+Returned as structured content (checked against the tool's output schema) and, for assistants that only read text, as the same JSON in a text block. A real search for `2018 accord`, `limit: 2`:
+
+```json
+{
+  "results": [
+    {
+      "id": "474-1861",
+      "make": "Honda",
+      "model": "Accord",
+      "years": [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],
+      "description": "Midsize sedan in the mainstream segment known for reliability, roomy interior, and strong resale value.",
+      "match": "possible"
+    },
+    {
+      "id": "582-3146",
+      "make": "Audi",
+      "model": "A4",
+      "years": [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "description": "Compact executive sedan in the mid-size premium class, positioned in the premium segment and known for balance of comfort, technology, and handling.",
+      "match": "possible"
+    }
+  ],
+  "nothingClose": false,
+  "years": [2016, 2020],
+  "note": "Descriptions are AI-written and can be wrong."
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `results` | Closest first. Only these six fields go out; no scores, vectors or internal fields |
+| `results[].make` | Written the way people write it ("Honda", "BMW"), as on the page |
+| `results[].description` | AI-written, cleaned of invisible characters; `null` if the car has none |
+| `results[].match` | `strong` (very likely right), `possible` (may or may not fit) or `weak` (probably doesn't). Words, not the score: [why](evaluation.md#the-match-display-why-words-not-percentages-2026-11-19) |
+| `nothingClose` | `true` when no result scores 0.65 or more, the same flag as `POST /api/search`. "pickup truck" isn't flagged: it scores 0.75 and comes back as `possible` matches |
+| `years` | The model-year range the query filtered to, or `null` |
+| `note` | Always "Descriptions are AI-written and can be wrong." |
+
+The types are `ToolResult` and `ToolCar` in [`mcp/search-tool.ts`](../mcp/search-tool.ts).
+
+### Errors
+
+Every refusal comes back as a tool result marked `isError`, with a message the assistant can pass on. Nothing is searched or counted.
+
+| When | Message |
+|---|---|
+| Bad `query` or `limit` (caught by the schema) | The SDK's `Input validation error: …`, naming the field |
+| A query that's only spaces | `query must be 1-500 characters` |
+| 10 searches in the last minute | `Limit reached: 10 searches a minute. Try again in N seconds.` |
+| 100 searches since the server started | `Limit reached: 100 searches this session. Restart the server to search again.` |
+| Mongo or OpenAI failed | `Search is unavailable right now` (the reason goes to the server's stderr only) |
+
+If `NUXT_MONGODB_URI` or `NUXT_OPENAI_KEY` is missing, the server exits at startup with a message on stderr, so the assistant's app shows it as failed.
+
+### Cost and limits
+
+One OpenAI embeddings call per search, a tiny fraction of a cent, and no chat calls. At most 10 searches a minute and 100 per server process, so a looping assistant can't run it unbounded.

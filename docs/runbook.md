@@ -179,6 +179,23 @@ If an answer comes back "Couldn't write a reliable answer", the `pnpm dev` termi
 5. **Read the result.** The bar is 100% of every part. It saves `data/eval/answer-check-<name>.json`, with the model's raw replies, and never overwrites a saved run.
 6. **On a fail, investigate; don't re-run.** Read the raw replies and log what happened in [evaluation.md](evaluation.md). A re-run only makes sense after a real change (prompt, code or rules), committed first.
 
+## Use the search from Claude Code
+
+**When:** you want an AI assistant to search the catalog itself, through the `search_cars` MCP tool ([api.md](api.md#mcp-tool-search_cars)). Each search costs one embeddings call and no chat calls.
+
+1. **Open a Claude Code session with this repo as its folder.** Claude Code reads [`.mcp.json`](../.mcp.json) from the session's own folder, so a session opened one folder up won't see the tool. In VS Code: File → Open Folder → `VectorRAGNuxt`, then open Claude Code.
+2. **Approve `car-search`** when Claude Code asks about the new project server. It runs `node --env-file-if-exists=.env mcp/server.ts`, so it uses the same `.env` as the app. Mongo has to be running (`docker compose up -d`).
+3. **Ask it something:** "What small electric cars are in the catalog?" It should call `search_cars` and answer from the results. `/mcp` in the session shows whether the server is connected.
+
+**Try the tool by hand, without an assistant:** `pnpm dlx @modelcontextprotocol/inspector node --env-file-if-exists=.env mcp/server.ts` opens the MCP Inspector, a local web page (127.0.0.1 only) that lists the tool and lets you call it. Click **Connect**, then **Tools → search_cars**. It costs only the embeddings. Stop it with Ctrl+C. For a one-off call from the terminal, add `--cli --method tools/call --tool-name search_cars --tool-arg "query=2018 accord"` after `inspector`.
+
+**If it fails:**
+
+- **"Search is unavailable right now":** the real error is on the server's stderr, never sent to the assistant. In the Inspector it's in the server's notifications pane; from the terminal, run the `--cli` call above and read what it prints. Usually Mongo isn't running, or the OpenAI key is missing, wrong or expired (`401`).
+- **The server shows as failed at startup:** `NUXT_MONGODB_URI` or `NUXT_OPENAI_KEY` is missing from `.env`; stderr names which.
+- **The assistant loses the connection right after a search:** something wrote to stdout. With stdio, stdout *is* the connection: every line must be a protocol message. Use `console.error` for logs in anything under `mcp/` or anything it imports, never `console.log`, and don't start the server through `pnpm`, which prints a banner to stdout (S18). `pnpm test:integration` catches this.
+- **"Limit reached":** 10 searches a minute, or 100 since the server started. Wait, or restart the server (in Claude Code, `/mcp` can reconnect it).
+
 ## Check the search page in a browser
 
 **When:** after changing the page, to see it without clicking around.

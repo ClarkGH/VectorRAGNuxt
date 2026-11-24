@@ -29,10 +29,11 @@ Stop Mongo with `docker compose down` (data is kept in a Docker volume; `down -v
 |---|---|
 | `pnpm check` | Lint, typecheck and unit tests (not screenshots or integration tests) |
 | `pnpm lint` | ESLint (Nuxt config, plus `vue/no-v-html` as an error) |
-| `pnpm typecheck` | `nuxt typecheck` (app, server, shared) + `tsc -p scripts` (scripts and tests) |
+| `pnpm typecheck` | `nuxt typecheck` (app, server, shared) + `tsc -p scripts` (scripts, the MCP server and tests) |
 | `pnpm test` | Unit tests: input validation (S1/S2), year parsing, description checks (P2/P3), grouping, re-embed rules, cache names, eval metrics and win/loss rules |
 | `pnpm screenshot` | Headless-Chromium screenshots of the search page (light, dark, phone) with made-up results; needs `pnpm dev` running and `pnpm browser:install` once (again after Playwright updates). See the [runbook](docs/runbook.md#check-the-search-page-in-a-browser) |
-| `pnpm test:integration` | Ingest + vector search + year filter + index upgrade against real Mongo with a stand-in OpenAI (needs `docker compose up -d`; no OpenAI key) |
+| `pnpm test:integration` | Ingest + vector search + year filter + index upgrade, and the MCP server over real stdio, against real Mongo with a stand-in OpenAI (needs `docker compose up -d`; no OpenAI key) |
+| `pnpm dlx @modelcontextprotocol/inspector node --env-file-if-exists=.env mcp/server.ts` | The MCP Inspector: a local page to call the `search_cars` tool by hand, one embeddings call per search. Claude Code picks the tool up from `.mcp.json`. See the [runbook](docs/runbook.md#use-the-search-from-claude-code) |
 | `pnpm test:relevance` | Real searches against the real database and embeddings: 5 pass/fail checks plus 3 known weak spots, with a top-5 table to compare before and after a change. Run by hand; needs `pnpm ingest` done and the key. See the [runbook](docs/runbook.md#check-search-quality) |
 | `pnpm eval run` / `compare` | Scores search against the labeled searches in `eval/golden.json` (nDCG, Hit@1, MRR, Recall) and calls a change a win, loss or inconclusive. Run by hand; about 24 embeddings calls per run. See [Measuring search quality](docs/evaluation.md) and the [runbook](docs/runbook.md#score-search-quality) |
 | `pnpm answer-check --label <name>` | Checks the AI answers against the committed rules in `eval/answer-check.json`: grounded, refuses when it should, resists prompt injection. About 11 chat calls of the free tier's 50 a day; `--mock` tries it for free. See the [runbook](docs/runbook.md#run-the-answer-check) |
@@ -81,7 +82,8 @@ I'm told nothing fits: the catalog is mostly passenger cars, with a few SUVs and
 ## Docs
 
 - [How it works](docs/rag.md): the pipeline, what we're seeding, and the vector math behind RAG
-- [API reference](docs/api.md): `POST /api/search`, `GET /api/catalog` and `GET /api/health`, with real examples and every error
+- [API reference](docs/api.md): `POST /api/search`, `POST /api/answer`, `GET /api/catalog`, `GET /api/health` and the `search_cars` MCP tool, with real examples and every error
 - [Runbook](docs/runbook.md): adding a model year, fixing or rewriting descriptions, changing the embedding model, starting the database over
 - [Measuring search quality](docs/evaluation.md): how we'll tell whether a change makes search better or worse (labeled searches, scores, win/loss rules), checked with a simulation
 - [Spec: Ingest + vector search](docs/specs/ingest-search.md): the plan for the "closest car" slice, including security, and where verification stands
+- [Spec: Car search as an MCP tool](docs/specs/mcp-server.md): `search_cars` for AI assistants, its rules (S18–S23) and how it was checked

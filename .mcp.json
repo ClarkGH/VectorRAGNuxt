@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "car-search": {
+      "command": "node",
+      "args": ["--env-file-if-exists=.env", "mcp/server.ts"]
+    }
+  }
+}

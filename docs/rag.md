@@ -100,13 +100,24 @@ Three rules sit under every AI piece of this project. They're the bread and butt
 2. **Read-only by default.** The model never acts. It can't write to the database, call other services or follow links. Code decides what happens with its answer.
 3. **Never combine untrusted input with tools that can act.** Anything the model reads might contain instructions: a visitor's search, or a description another model wrote. So its output is treated as data, not commands. It's checked against a strict shape, cleaned, and thrown away if it names a car it wasn't given.
 
-The detailed rules are P1–P7 and S1–S17 in the specs ([ingest and search](specs/ingest-search.md), [generation](specs/generate.md)). A future [MCP](https://modelcontextprotocol.io) server would follow the same three: one read-only search tool, run locally, with the server, not the model, deciding what's allowed.
+The detailed rules are P1–P7 and S1–S23 in the specs ([ingest and search](specs/ingest-search.md), [generation](specs/generate.md), [MCP](specs/mcp-server.md)). The MCP tool below follows the same three: one read-only search tool, run locally, with the server, not the model, deciding what's allowed.
+
+## Searching from an AI assistant (MCP)
+
+The page isn't the only way in. **MCP** (Model Context Protocol) is an open standard for connecting AI assistants to tools: one server, and any assistant that speaks the protocol can use it. This repo has one, with one tool, `search_cars`, so an assistant like Claude Code can search the catalog itself ([how to set it up](runbook.md#use-the-search-from-claude-code), [what it takes and returns](api.md#mcp-tool-search_cars)).
+
+**Same retrieval, different caller.** The tool runs the page's own search code: the same checks, the same year filter, the same "nothing close" flag, the same match words. Only the caller changes. A person types into a page; an assistant decides by itself when to search and what to type.
+
+**Where the trust boundary sits.** The assistant chooses *when* to call and *what* to ask. The server decides *what's possible*: it checks every input, allows 10 searches a minute and 100 a session, and sends back only six fields per car, with descriptions cleaned and labeled AI-written. No scores, no vectors, nothing else. It can't change data or call the chat model. It talks over stdin and stdout rather than a network port, so there's nothing for a website or another device to reach.
+
+**What the server can't control: what the assistant says next.** In the first demo, asked for a small electric car, Claude Code called the tool and built its answer from the results, including the "AI-written" caveat and a fair doubt about an obscure maker. It also added things the tool never said: that the Smart EQ Fortwo is "pricey for what it is" and "only available used", and that the Fiat 500e is the one you can still buy new. Those may be true, but they came from the assistant's own knowledge, not from the catalog. That's the difference from the [G step](#9-how-the-g-works), where the app checks every answer before showing it. With MCP, the server controls what goes in, and the assistant owns what comes out. *The search hands over the keys to a car it checked; where the assistant drives it is up to the assistant.*
 
 ## Glossary
 
 - **Embedding / vector:** a car's (or request's) position on the map of meaning, stored as a long list of numbers.
 - **Vector search:** finding the stored positions closest to a new one.
 - **RAG:** retrieval-augmented generation. Find relevant data first, then let an AI write an answer using it.
+- **MCP:** Model Context Protocol, an open standard for giving AI assistants tools. Here, one read-only tool that runs the catalog search.
 - **Score:** how close a result is, from 0 to 1. **0.5 means "unrelated"**, not "half a match". *It's the search engine's way of saying "it's not you, it's me."*
 
 ---
