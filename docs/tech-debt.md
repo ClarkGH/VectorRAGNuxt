@@ -24,7 +24,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 
 | # | Item | Type | I | R | E | Score |
 | --- | --- | --- | --- | --- | --- | --- |
-| 15 | Yellow accents, direction C (Search button, band stripe, AI pick notes) | Design | 1 | 1 | 2 | built; screenshots left |
+| 15 | Yellow accents, direction C (Search button, band stripe, AI pick notes) | Design | 1 | 1 | 2 | done |
 | 11 | Stack review before the G slice (2026-11-17) | Security, Code, Spec | | | | done |
 | 5 | Before-public hardening | Security | | | | parked, fixes in the spec |
 | 12 | Answer cache in Redis instead of Mongo | Architecture | 1 | 1 | 3 | 6, stretch |
@@ -62,7 +62,7 @@ Each item gets Impact (how much it slows work), Risk (what happens if it's left)
 - **Focus ring:** the search panel is white in both themes (the dark mock-ups had guessed a dark one), so the yellow button always sits on white, and its focus ring is navy: 15.7:1.
 - **Contrast, all WCAG AA:** Search text 9.7:1 (8.0:1 and 11.0:1 on hover), pick label 7.0:1 light and 7.9:1 dark, pick text 14.4:1 and 10.7:1, the stripe against the band 9.7:1 and 10.7:1.
 - **"Explain these results" stays blue for now** (Claude's suggestion, Clark to confirm): one yellow action per screen keeps Search as the obvious first step, the way a car-pricing site has one yellow call to action. Switching it is one class in `AnswerPanel.vue`.
-- **Left:** refresh `docs/images/ai-answer-small-honda-hatchback.png` and the portfolio screenshot, which still show blue pick notes. The image needs a real answer (one chat call, or the cached one if the prompt is unchanged).
+- **Screenshots refreshed 2026-11-25:** `docs/images/ai-answer-small-honda-hatchback.png` and the portfolio's `vector-rag-nuxt.png`, with the same real answer as before (served from the cache, no chat call), so the captions and alt text still match. Taken with Playwright against `NUXT_ANSWER_MOCK=false pnpm dev`, cropped above the Nuxt DevTools button.
 
 ### 14. Search quality on everyday wording
 

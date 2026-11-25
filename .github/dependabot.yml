@@ -20,5 +20,11 @@ updates:
           - "minor"
           - "patch"
     open-pull-requests-limit: 5
+    # TypeScript 7 (the rewritten compiler) breaks lint and typecheck: typescript-eslint
+    # doesn't support it yet, and vue-tsc (nuxt typecheck) can't find tsc in it.
+    # Checked 2026-11-25 on Dependabot's 7.0.2 PR. Remove this once both support 7.
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     commit-message:
       prefix: "deps"
